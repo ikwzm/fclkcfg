@@ -443,4 +443,4 @@ module_exit(fclkcfg_module_exit);
 
 MODULE_AUTHOR("ikwzm");
 MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
