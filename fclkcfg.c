@@ -394,6 +394,8 @@ static int __init fclkcfg_module_init(void)
 {
     int retval = 0;
 
+    fclkcfg_device_minor_number_allocator_initilize();
+
     retval = alloc_chrdev_region(&fclkcfg_device_number, 0, 0, DRIVER_NAME);
     if (retval != 0) {
         printk(KERN_ERR "%s: couldn't allocate device major number\n", DRIVER_NAME);
