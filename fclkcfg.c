@@ -348,6 +348,7 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
         fclkcfg_device_minor_number_free(MINOR(this->device_number));
         this->device_number = 0;
     }
+    kfree(this);
     dev_set_drvdata(&pdev->dev, NULL);
     dev_info(&pdev->dev, "driver unloaded\n");
     return 0;
