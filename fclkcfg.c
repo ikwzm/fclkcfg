@@ -44,6 +44,7 @@
 #include <linux/firmware.h>
 #include <linux/fs.h>
 #include <linux/version.h>
+#include "minor_number_allocator.h"
 
 #define DRIVER_NAME        "fclkcfg"
 
@@ -201,24 +202,7 @@ static const struct attribute_group* fclkcfg_attr_groups[] = {
 /**
  * fclkcfg_device_minor_number_bitmap
  */
-static u32  fclkcfg_device_minor_number_bitmap = 0;
-static int  fclkcfg_device_minor_number_allocate(void)
-{
-    int i;
-    for (i = 0 ; i < 32; i++) {
-        u32 mask = (1 << i);
-        if ((fclkcfg_device_minor_number_bitmap & mask) == 0) {
-            fclkcfg_device_minor_number_bitmap |= mask;
-            return i;
-        }
-    }
-    return -1;
-}
-static void fclkcfg_device_minor_number_free(int num)
-{
-    u32 mask = (1 << num);
-    fclkcfg_device_minor_number_bitmap &= ~mask;
-}
+DECLARE_MINOR_NUMBER_ALLOCATOR(fclkcfg_device, 64);
 
 /**
  * fclkcfg_platform_driver_probe() -  Probe call for the device.
@@ -254,7 +238,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
      */
     dev_dbg(&pdev->dev, "get device_number start.\n");
     {
-        int minor_number = fclkcfg_device_minor_number_allocate();
+        int minor_number = fclkcfg_device_minor_number_new();
         if (minor_number < 0) {
             dev_err(&pdev->dev, "invalid or conflict minor number %d.\n", minor_number);
             retval = -ENODEV;
