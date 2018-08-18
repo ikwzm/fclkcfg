@@ -240,6 +240,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     int                      retval = 0;
     struct fclk_driver_data* this   = NULL;
     const char*              device_name;
+    struct clk*              resource_clk;
 
     dev_dbg(&pdev->dev, "driver probe start.\n");
     /*
@@ -274,17 +275,17 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     /*
      * get clk
      */
-    dev_dbg(&pdev->dev, "of_clk_get() start.\n");
+    dev_dbg(&pdev->dev, "of_clk_get(0) start.\n");
     {
         this->clk = of_clk_get(pdev->dev.of_node, 0);
         if (IS_ERR_OR_NULL(this->clk)) {
-            dev_err(&pdev->dev, "of_clk_get() failed.\n");
+            dev_err(&pdev->dev, "of_clk_get(0) failed.\n");
             retval = PTR_ERR(this->clk);
             this->clk = NULL;
             goto failed;
         }
     }    
-    dev_dbg(&pdev->dev, "of_clk_get() done.\n");
+    dev_dbg(&pdev->dev, "of_clk_get(0) done.\n");
 
     /*
      * get device name
@@ -317,6 +318,34 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     }
     dev_dbg(&pdev->dev, "device_create done\n");
 
+    /*
+     * get resource clock
+     */
+    dev_dbg(&pdev->dev, "of_clk_get(1) start.\n");
+    {
+        resource_clk = of_clk_get(pdev->dev.of_node, 1);
+        if (!IS_ERR_OR_NULL(resource_clk)) {
+            bool        found    = false;
+            struct clk* curr_clk = this->clk;
+            while (!IS_ERR_OR_NULL(curr_clk)) {
+                if (clk_has_parent(curr_clk, resource_clk) == true) {
+                    retval = clk_set_parent(curr_clk, resource_clk);
+                    if (retval != 0) {
+                        dev_err(&pdev->dev, "clk_set_parent(%s, %s) failed.\n", __clk_get_name(curr_clk), __clk_get_name(resource_clk));
+                        goto failed;
+                    }
+                    found = true;
+                    break;
+                }
+                curr_clk = clk_get_parent(curr_clk);
+            }
+            if (found == false) {
+                dev_err(&pdev->dev, "%s is not resource clock of %s.\n", __clk_get_name(resource_clk), __clk_get_name(this->clk));
+                goto failed;
+            }
+        }
+    }
+    dev_dbg(&pdev->dev, "of_clk_get(1) done.\n");
     /*
      * insert_rate
      */
@@ -404,6 +433,8 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     dev_info(&pdev->dev, "driver installed.\n");
     dev_info(&pdev->dev, "device name    : %s\n" , device_name);
     dev_info(&pdev->dev, "clock  name    : %s\n" , __clk_get_name(this->clk));
+    if (!IS_ERR_OR_NULL(resource_clk))
+        dev_info(&pdev->dev, "resource clock : %s\n", __clk_get_name(resource_clk));
     dev_info(&pdev->dev, "clock  rate    : %lu\n", clk_get_rate(this->clk));
     dev_info(&pdev->dev, "clock  enabled : %d\n" , __clk_is_enabled(this->clk));
     if (this->remove_rate_valid == true)

@@ -56,14 +56,17 @@ zynq# rmmod fclkcfg
 
 #### clocks
 
-clocks プロパティで制御するクロックを指定します。clocks の詳細は後述の例を参照してください。
+clocks プロパティの第一引数で制御する PL のクロックを指定します。
+clocks プロパティの第二引数で PL の リソースのクロックを指定します。この引数はオプションです。
 
 ````devicetree:devicetree.dts
 		fclk0 {
 			compatible  = "ikwzm,fclkcfg-0.10.a";
-			clocks      = <&clkc 15>;
+			clocks      = <&clkc 15>, <&clkc 2>;
 		};
 ````
+
+clocks の詳細は後述の例を参照してください。
 
 #### insert-rate
 
@@ -159,11 +162,32 @@ ZYBO+linux(v4.4.4) で、デバイスツリーに次のような項目を追加�
 
 これは fclk0 という名前のデバイスドライバは、ZYNQ の PL Clock 0 を制御することを示します。
 
-clocks で PL のクロックを指定します。
+clocks の第一引数で PL のクロックを指定します。
 
 このデバイスツリーではクロックの設定は slcr(System Level Control Register) の clkc で行うことを示しています。
 
 clocks = \<\&clkc 15\> と記述することにより、fclk0 は clkc が管理しているクロックの15番目のクロック(これが PL Clock 0を指す)を制御することを指定します。
+
+````devicetree:devicetree.dts
+/dts-v1/;
+		:
+	      (中略)
+		:
+		fclk1 {
+			compatible  = "ikwzm,fclkcfg-0.10.a";
+			clocks      = <&clkc 16>, <&clkc 2>;
+		};
+````
+
+これは fclk1 という名前のデバイスドライバは、ZYNQ の PL Clock 1 を制御することを示します。
+
+clocks の第二引数で PL の リソースのクロックを指定しています。
+
+PL のクロックは、リソースのクロックを分周することにより必要な周波数のクロックを出力しています。clocks の第二引数で、PL のリソースのクロックを "armpll"、"ddrpll"、 "iopll" の何れかから選択することができます。
+
+clocks = \<\&clkc 16\>, \<\&clkc 2\> と記述することにより、fclk1 は clkc が管理している16番目のクロック(これが PL Clock 0を指す)を制御することを指定し、かつ clkc の管理している2番目のクロック(これが "iopll" を指す)をリソースクロックとして選択することを指定します。
+
+第二引数が省略された場合は、Linux Kernel の起動時に設定されていたリソースクロックが選択されます。
 
 #### ZYBO での例2
 
