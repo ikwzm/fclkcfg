@@ -292,7 +292,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
      */
     dev_dbg(&pdev->dev, "get device name start.\n");
     {
-        device_name = of_get_property(pdev->dev.of_node, "name", NULL);
+        device_name = of_get_property(pdev->dev.of_node, "device-name", NULL);
         
         if (IS_ERR_OR_NULL(device_name)) {
             device_name = dev_name(&pdev->dev);
