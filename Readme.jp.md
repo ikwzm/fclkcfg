@@ -8,7 +8,7 @@ FPGA Clock Configuration Device Driver
 ## fclkcfg とは
 
 
-fclkcfg は FPGA Clock Configuration Device Driver で、ユーザー空間から Zynq の PL(Plogrammable Logic) のクロックの周波数を変更したり出力を制御したりするデバイスドライバです。
+fclkcfg は FPGA Clock Configuration Device Driver で、ユーザー空間から Zynq/Zynq UltraScale+ の PL(Plogrammable Logic) のクロックの周波数を変更および出力を制御するデバイスドライバです。
 
 
 ## 構成
@@ -30,7 +30,7 @@ Fig.1 fclkcfg の位置づけ
 
 
 *  OS: Linux Kernel Version 4.4.4 以降
-*  CPU: ARM(ZYNQ)
+*  CPU: ARM(Zynq-7000), ARM64(Zynq UltraScale+)
 
 現在(2016年4月8日)、Altera-SoC で動作確認中ですがまだ動いていません。
 
@@ -88,7 +88,7 @@ fclkcfg はデバイスツリーでクロックの設定をします。具体的
 		fclk0 {
 			compatible    = "ikwzm,fclkcfg-0.10.a";
 			device-name   = "fpga-clk0";
-			clocks        = <&clkc 15> <&clkc 2>;
+			clocks        = <&clkc 15>, <&clkc 2>;
 			insert-rate   = "100000000";
 			insert-enable = <1>;
 			remove-rate   = "1000000";
@@ -126,7 +126,7 @@ clocks プロパティの第二引数で PL の リソースのクロックを�
 
 clocks プロパティは必須です。ただし第一引数は必須ですが第二引数はオプションです。
 
-clocks プロパティで指定するクロックは、<クロックのハンドル クロックのインデックス> で指定します。例えば ZYBO の場合、次のようにデバイスツリーでクロックが指定されています。
+clocks プロパティで指定するクロックは、<クロックのハンドル クロックのインデックス> で指定します。例えば Zynq の場合、次のようにデバイスツリーでクロックが指定されています。
 
 
 ```devicetree:zynq-7000.dtsi
@@ -181,23 +181,6 @@ clocks = <&clkc 16>, <&clkc 2>; と記述することにより、clkc が管理�
 第二引数が省略された場合は、Linux Kernel の起動時に設定されていたリソースクロックが選択されます。
 
 
-
-ZYNQ の場合 clocks に指定できるプロパティは次の通りです。
-
-Table.1 ZYBO のクロック
-
-| Clock Name  | Index  | Property Value | Description |
-|-------------|--------|----------------|-------------|
-| armpll | 0 | <&clkc 0> | ARMPLL 第二引数でのみ指定可 省略可 |
-| ddrpll | 1 | <&clkc 1> | DDRPLL 第二引数でのみ指定可 省略可 |
-| iopll | 2 | <&clkc 2> | IOPLL 第二引数でのみ指定可 省略可 |
-| fclk0 | 15 | <&clkc 15> | PL Clock 0 第一引数でのみ指定可 |
-| fclk1 | 16 | <&clkc 16> | PL Clock 1 第一引数でのみ指定可 |
-| fclk2 | 17 | <&clkc 17> | PL Clock 2 第一引数でのみ指定可 |
-| fclk3 | 18 | <&clkc 18> | PL Clock 3 第一引数でのみ指定可 |
-
-
-
 &clkc の代わりに phandle を使って指定することもできます。phandle は デバイスツリーを dtc (Device Tree Compiler) で dtb に変換するときに dtc によって割り当てられる整数値です。例えば dtc によって clkc の phandle が 5 に設定された場合、clocks = <5 15>  と指定する事で PL Clock 0 を制御することが出来ます。
 
 
@@ -221,6 +204,38 @@ Linux を起動する時に読み込むデバイスツリーがシンボル情�
 
 ```
 
+### Zynq で指定できる clocks プロパティ
+
+Zynq の場合 clocks に指定できるプロパティは次の通りです。
+
+Table.1 Zynq のクロック
+
+| Clock Name  | Index  | Property Value | Description |
+|-------------|--------|----------------|-------------|
+| armpll      | 0      | <&clkc 0>      | ARMPLL 第二引数でのみ指定可 省略可 |
+| ddrpll      | 1      | <&clkc 1>      | DDRPLL 第二引数でのみ指定可 省略可 |
+| iopll       | 2      | <&clkc 2>      | IOPLL 第二引数でのみ指定可 省略可 |
+| fclk0       | 15     | <&clkc 15>     | PL Clock 0 第一引数でのみ指定可 |
+| fclk1       | 16     | <&clkc 16>     | PL Clock 1 第一引数でのみ指定可 |
+| fclk2       | 17     | <&clkc 17>     | PL Clock 2 第一引数でのみ指定可 |
+| fclk3       | 18     | <&clkc 18>     | PL Clock 3 第一引数でのみ指定可 |
+
+
+### ZynqMP で指定できる clocks プロパティ
+
+ZynqMP の場合 clocks に指定できるプロパティは次の通りです。
+
+Table.2 ZynqMP のクロック
+
+| Clock Name  | Index  | Property Value | Description |
+|-------------|--------|----------------|-------------|
+| iopll       | 0      | <&clkc 0>      | IOPLL. 第二引数でのみ指定可 省略可 |
+| rpll        | 1      | <&clkc 1>      | RPLL.  第二引数でのみ指定可 省略可 |
+| dpll_to_lpd | 8      | <&clkc 8>      | DPLL.  第二引数でのみ指定可 省略可 |
+| pl0_ref     | 71     | <&clkc 71>     | PL Clock 0. 第一引数でのみ指定可 |
+| pl1_ref     | 72     | <&clkc 72>     | PL Clock 1. 第一引数でのみ指定可 |
+| pl2_ref     | 73     | <&clkc 73>     | PL Clock 2. 第一引数でのみ指定可 |
+| pl3_ref     | 74     | <&clkc 74>     | PL Clock 3. 第一引数でのみ指定可 |
 
 
 ## insert-rate プロパティ

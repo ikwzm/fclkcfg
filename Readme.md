@@ -20,7 +20,7 @@ Fig.1 Architecture of fclkcfg
 ## Supported platforms
 
 *  OS: Linux Kernel Version 4.4.4 or later
-*  CPU: ARM(Zynq-7000), ARM(Zynq UltraScale+)
+*  CPU: ARM(Zynq-7000), ARM64(Zynq UltraScale+)
 
 Note: fclkcfg is being tested on Altera-SoC as of 2016-04-08, but not confirmed to fully work on the platform.
 
@@ -65,7 +65,7 @@ The following is an example device tree overlay source `dts` that configures `cl
         fclk0 {
             compatible    = "ikwzm,fclkcfg-0.10.a";
             device-name   = "fpga-clk0";
-            clocks        = <&clkc 15> <&clkc 2>;
+            clocks        = <&clkc 15>, <&clkc 2>;
             insert-rate   = "100000000";
             insert-enable = <1>;
             remove-rate   = "1000000";
@@ -97,7 +97,7 @@ its resource clock as a second argument (optional). The `clock` property is a ma
 
 Clocks passed to the `clocks` property should be in the format of `<clock_handle clock_index>`, e.g. `<&clkc 15>`.
 
-For example, in the case of Zybo, the clock list is defined as follows in the device tree.
+For example, in the case of Zynq, the clock list is defined as follows in the device tree.
 
 ```devicetree:zynq-7000.dtsi
 /dts-v1/;
@@ -144,22 +144,6 @@ namely `fclk1` (i.e. PL Clock 1) is specified as the target of generation, based
 
 When the second argument is unspecified, a resource clock that is selected up on Linux boot up is used as a resource clock.
 
-
-The following table lists clocks that are defined in the ZYBO device tree and can be passed to the `clock` property.
-
-Table.1 ZYBO clocks
-
-| Clock Name  | Index      | Property Value | Description |
-|-------------|------------|----------------|-------------|
-| armpll      | 0          | <&clkc 0>      | ARMPLL. Can be specified as a "resource clock" (optional) |
-| ddrpll      | 1          | <&clkc 1>      | DDRPLL. Can be specified as a "resource clock" (optional) |
-| iopll       | 2          | <&clkc 2>      | IOPLL. Can be specified as a "resource clock" (optional) |
-| fclk0       | 15         | <&clkc 15>     | PL Clock 0. |
-| fclk1       | 16         | <&clkc 16>     | PL Clock 1. |
-| fclk2       | 17         | <&clkc 17>     | PL Clock 2. |
-| fclk3       | 18         | <&clkc 18>     | PL Clock 3. |
-
-
 The "phandle" integer number, which is assigned when a decive tree source is compiled to device tree blob by dtc (Device Tree Compiler), can also be used in place of the symbol representation like `&clkc`. For instance, if `clkc` is assigned a phandle number of 5 by dtc, `clocks = <5 15>` has the same meaning as `clocks = <&clkc 15>`, and can be used to control PL Clock 0.
 
 Sometimes symbol definitions can be removed from a compiled device tree blob, and in such cases, the symbol representation like `&clkc` cannot be used, and therefore, a phandle number should be explicitly specified in the device tree overlay as follows:
@@ -179,6 +163,40 @@ Sometimes symbol definitions can be removed from a compiled device tree blob, an
     };
 };
 ```
+
+### Clock properties for Zynq
+
+The following table lists clocks that are defined in the Zynq device tree and can be passed to the `clock` property.
+
+Table.1 Zynq clocks
+
+| Clock Name  | Index      | Property Value | Description |
+|-------------|------------|----------------|-------------|
+| armpll      | 0          | <&clkc 0>      | ARMPLL. Can be specified as a "resource clock" (optional) |
+| ddrpll      | 1          | <&clkc 1>      | DDRPLL. Can be specified as a "resource clock" (optional) |
+| iopll       | 2          | <&clkc 2>      | IOPLL. Can be specified as a "resource clock" (optional) |
+| fclk0       | 15         | <&clkc 15>     | PL Clock 0. |
+| fclk1       | 16         | <&clkc 16>     | PL Clock 1. |
+| fclk2       | 17         | <&clkc 17>     | PL Clock 2. |
+| fclk3       | 18         | <&clkc 18>     | PL Clock 3. |
+
+
+### Clock properties for ZynqMP
+
+The following table lists clocks that are defined in the ZynqMP device tree and can be passed to the `clock` property.
+
+Table.2 ZynqMP clocks
+
+| Clock Name  | Index      | Property Value | Description |
+|-------------|------------|----------------|-------------|
+| iopll       | 0          | <&clkc 0>      | IOPLL. Can be specified as a "resource clock" (optional) |
+| rpll        | 1          | <&clkc 1>      | RPLL. Can be specified as a "resource clock" (optional) |
+| dpll_to_lpd | 8          | <&clkc 8>      | DPLL. Can be specified as a "resource clock" (optional) |
+| pl0_ref     | 71         | <&clkc 71>     | PL Clock 0. |
+| pl1_ref     | 72         | <&clkc 72>     | PL Clock 1. |
+| pl2_ref     | 73         | <&clkc 73>     | PL Clock 2. |
+| pl3_ref     | 74         | <&clkc 74>     | PL Clock 3. |
+
 
 ## `insert-rate` property
 
@@ -302,7 +320,7 @@ zynq# cat /sys/class/fclkcfg/fclk0/enable
 0
 ```
 
-## `/sys/class/fclkcfg/\<device-name\>/rate`
+## /sys/class/fclkcfg/\<device-name\>/rate
 
 This file is used to change the output clock frequency. The following example selects an output frequency of 100 MHz.
 
@@ -322,7 +340,7 @@ zynq# cat /sys/class/fclkcfg/fclk0/rate
 125000000
 ```
 
-## `/sys/class/fclkcfg/\<device-name\>/round_rate`
+## /sys/class/fclkcfg/\<device-name\>/round_rate
 
 As described above, not all desired output frequency can be achieved due to the limitations of the PLL.
 To know an actual output frequency, one can write a desired clock frequency to this file, followed by a read access.
