@@ -13,7 +13,7 @@ user-space configuration of clock supplied to Programmable Logic (PL) of Zynq/Zy
 `fclkcfg` exposes Linux Kernel's `clk` driver functions to user space so that PL clock configuration
 can be done from the user space.
 
-![Fig.1 fclkcfg の位置づけ](./fclkcfg1.jpg "Fig.1 Architecture of fclkcfg")
+![Fig.1 Architecture of fclkcfg](./fclkcfg1.jpg "Fig.1 Architecture of fclkcfg")
 
 Fig.1 Architecture of fclkcfg
 
@@ -55,6 +55,12 @@ The loaded module can be removed using the `rmmod` command.
 zynq# rmmod fclkcfg
 [  261.514039] fclkcfg amba:fclk0: driver unloaded
 ```
+
+## Installation with the Debian package
+
+For details, refer to the following URL.
+
+*  https://github.com/ikwzm/fclkcfg-kmod-dpkg
 
 # Device Tree
 
@@ -170,32 +176,45 @@ The following table lists clocks that are defined in the Zynq device tree and ca
 
 Table.1 Zynq clocks
 
-| Clock Name  | Index      | Property Value | Description |
-|-------------|------------|----------------|-------------|
-| armpll      | 0          | <&clkc 0>      | ARMPLL. Can be specified as a "resource clock" (optional) |
-| ddrpll      | 1          | <&clkc 1>      | DDRPLL. Can be specified as a "resource clock" (optional) |
-| iopll       | 2          | <&clkc 2>      | IOPLL. Can be specified as a "resource clock" (optional) |
-| fclk0       | 15         | <&clkc 15>     | PL Clock 0. |
-| fclk1       | 16         | <&clkc 16>     | PL Clock 1. |
-| fclk2       | 17         | <&clkc 17>     | PL Clock 2. |
-| fclk3       | 18         | <&clkc 18>     | PL Clock 3. |
+| Clock Name  | Index  | Property Value   | Description |
+|-------------|--------|------------------|-------------|
+| armpll      | 0      | <&clkc 0>        | ARMPLL. Can be specified as a "resource clock" (optional) |
+| ddrpll      | 1      | <&clkc 1>        | DDRPLL. Can be specified as a "resource clock" (optional) |
+| iopll       | 2      | <&clkc 2>        | IOPLL. Can be specified as a "resource clock" (optional) |
+| fclk0       | 15     | <&clkc 15>       | PL Clock 0. |
+| fclk1       | 16     | <&clkc 16>       | PL Clock 1. |
+| fclk2       | 17     | <&clkc 17>       | PL Clock 2. |
+| fclk3       | 18     | <&clkc 18>       | PL Clock 3. |
 
 
 ### Clock properties for ZynqMP
 
 The following table lists clocks that are defined in the ZynqMP device tree and can be passed to the `clock` property.
 
-Table.2 ZynqMP clocks
+Table.2 ZynqMP clocks(linux-xlnx v2018.2)
 
-| Clock Name  | Index      | Property Value | Description |
-|-------------|------------|----------------|-------------|
-| iopll       | 0          | <&clkc 0>      | IOPLL. Can be specified as a "resource clock" (optional) |
-| rpll        | 1          | <&clkc 1>      | RPLL. Can be specified as a "resource clock" (optional) |
-| dpll_to_lpd | 8          | <&clkc 8>      | DPLL. Can be specified as a "resource clock" (optional) |
-| pl0_ref     | 71         | <&clkc 71>     | PL Clock 0. |
-| pl1_ref     | 72         | <&clkc 72>     | PL Clock 1. |
-| pl2_ref     | 73         | <&clkc 73>     | PL Clock 2. |
-| pl3_ref     | 74         | <&clkc 74>     | PL Clock 3. |
+| Clock Name  | Index  | Property Value   | Description |
+|-------------|--------|------------------|-------------|
+| iopll       | 0      | <&clkc 0>        | IOPLL. Can be specified as a "resource clock" (optional) |
+| rpll        | 1      | <&clkc 1>        | RPLL. Can be specified as a "resource clock" (optional) |
+| dpll_to_lpd | 8      | <&clkc 8>        | DPLL. Can be specified as a "resource clock" (optional) |
+| pl0_ref     | 71     | <&clkc 71>       | PL Clock 0. |
+| pl1_ref     | 72     | <&clkc 72>       | PL Clock 1. |
+| pl2_ref     | 73     | <&clkc 73>       | PL Clock 2. |
+| pl3_ref     | 74     | <&clkc 74>       | PL Clock 3. |
+
+
+Table.3 ZynqMP clocks(linux-xlnx v2019.1)
+
+| Clock Name  | Index  | Property Value   | Description |
+|-------------|--------|------------------|-------------|
+| iopll       | 0      | <&zynqmp_clk 0>  | IOPLL. Can be specified as a "resource clock" (optional) |
+| rpll        | 1      | <&zynqmp_clk 1>  | RPLL. Can be specified as a "resource clock" (optional) |
+| dpll_to_lpd | 8      | <&zynqmp_clk 8>  | DPLL. Can be specified as a "resource clock" (optional) |
+| pl0_ref     | 71     | <&zynqmp_clk 71> | PL Clock 0. |
+| pl1_ref     | 72     | <&zynqmp_clk 72> | PL Clock 1. |
+| pl2_ref     | 73     | <&zynqmp_clk 73> | PL Clock 2. |
+| pl3_ref     | 74     | <&zynqmp_clk 74> | PL Clock 3. |
 
 
 ## `insert-rate` property

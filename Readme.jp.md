@@ -74,9 +74,11 @@ zynq# rmmod fclkcfg
 [  261.514039] fclkcfg amba:fclk0: driver unloaded
 ```
 
+## Debian Package によるインストール
 
+詳しくは以下の URL を参照してください。
 
-
+*  https://github.com/ikwzm/fclkcfg-kmod-dpkg
 
 # デバイスツリー
 
@@ -210,32 +212,45 @@ Zynq の場合 clocks に指定できるプロパティは次の通りです。
 
 Table.1 Zynq のクロック
 
-| Clock Name  | Index  | Property Value | Description |
-|-------------|--------|----------------|-------------|
-| armpll      | 0      | <&clkc 0>      | ARMPLL 第二引数でのみ指定可 省略可 |
-| ddrpll      | 1      | <&clkc 1>      | DDRPLL 第二引数でのみ指定可 省略可 |
-| iopll       | 2      | <&clkc 2>      | IOPLL 第二引数でのみ指定可 省略可 |
-| fclk0       | 15     | <&clkc 15>     | PL Clock 0 第一引数でのみ指定可 |
-| fclk1       | 16     | <&clkc 16>     | PL Clock 1 第一引数でのみ指定可 |
-| fclk2       | 17     | <&clkc 17>     | PL Clock 2 第一引数でのみ指定可 |
-| fclk3       | 18     | <&clkc 18>     | PL Clock 3 第一引数でのみ指定可 |
+| Clock Name  | Index  | Property Value   | Description |
+|-------------|--------|------------------|-------------|
+| armpll      | 0      | <&clkc 0>        | ARMPLL 第二引数でのみ指定可 省略可 |
+| ddrpll      | 1      | <&clkc 1>        | DDRPLL 第二引数でのみ指定可 省略可 |
+| iopll       | 2      | <&clkc 2>        | IOPLL 第二引数でのみ指定可 省略可 |
+| fclk0       | 15     | <&clkc 15>       | PL Clock 0 第一引数でのみ指定可 |
+| fclk1       | 16     | <&clkc 16>       | PL Clock 1 第一引数でのみ指定可 |
+| fclk2       | 17     | <&clkc 17>       | PL Clock 2 第一引数でのみ指定可 |
+| fclk3       | 18     | <&clkc 18>       | PL Clock 3 第一引数でのみ指定可 |
 
 
 ### ZynqMP で指定できる clocks プロパティ
 
 ZynqMP の場合 clocks に指定できるプロパティは次の通りです。
 
-Table.2 ZynqMP のクロック
+Table.2 ZynqMP のクロック (linux-xlnx v2018.2)
 
-| Clock Name  | Index  | Property Value | Description |
-|-------------|--------|----------------|-------------|
-| iopll       | 0      | <&clkc 0>      | IOPLL. 第二引数でのみ指定可 省略可 |
-| rpll        | 1      | <&clkc 1>      | RPLL.  第二引数でのみ指定可 省略可 |
-| dpll_to_lpd | 8      | <&clkc 8>      | DPLL.  第二引数でのみ指定可 省略可 |
-| pl0_ref     | 71     | <&clkc 71>     | PL Clock 0. 第一引数でのみ指定可 |
-| pl1_ref     | 72     | <&clkc 72>     | PL Clock 1. 第一引数でのみ指定可 |
-| pl2_ref     | 73     | <&clkc 73>     | PL Clock 2. 第一引数でのみ指定可 |
-| pl3_ref     | 74     | <&clkc 74>     | PL Clock 3. 第一引数でのみ指定可 |
+| Clock Name  | Index  | Property Value   | Description |
+|-------------|--------|------------------|-------------|
+| iopll       | 0      | <&clkc 0>        | IOPLL. 第二引数でのみ指定可 省略可 |
+| rpll        | 1      | <&clkc 1>        | RPLL.  第二引数でのみ指定可 省略可 |
+| dpll_to_lpd | 8      | <&clkc 8>        | DPLL.  第二引数でのみ指定可 省略可 |
+| pl0_ref     | 71     | <&clkc 71>       | PL Clock 0. 第一引数でのみ指定可 |
+| pl1_ref     | 72     | <&clkc 72>       | PL Clock 1. 第一引数でのみ指定可 |
+| pl2_ref     | 73     | <&clkc 73>       | PL Clock 2. 第一引数でのみ指定可 |
+| pl3_ref     | 74     | <&clkc 74>       | PL Clock 3. 第一引数でのみ指定可 |
+
+
+Table.3 ZynqMP のクロック (linux-xlnx v2019.1)
+
+| Clock Name  | Index  | Property Value   | Description |
+|-------------|--------|------------------|-------------|
+| iopll       | 0      | <&zynqmp_clk 0>  | IOPLL. 第二引数でのみ指定可 省略可 |
+| rpll        | 1      | <&zynqmp_clk 1>  | RPLL.  第二引数でのみ指定可 省略可 |
+| dpll_to_lpd | 8      | <&zynqmp_clk 8>  | DPLL.  第二引数でのみ指定可 省略可 |
+| pl0_ref     | 71     | <&zynqmp_clk 71> | PL Clock 0. 第一引数でのみ指定可 |
+| pl1_ref     | 72     | <&zynqmp_clk 72> | PL Clock 1. 第一引数でのみ指定可 |
+| pl2_ref     | 73     | <&zynqmp_clk 73> | PL Clock 2. 第一引数でのみ指定可 |
+| pl3_ref     | 74     | <&zynqmp_clk 74> | PL Clock 3. 第一引数でのみ指定可 |
 
 
 ## insert-rate プロパティ
