@@ -117,6 +117,30 @@ static int __fclk_set_rate(struct fclk_driver_data* this, unsigned long rate)
     return status;
 }
 
+/**
+ * __fclk_change_status()
+ */
+static int __fclk_change_status(struct fclk_driver_data* this, bool enable_valid, bool enable, bool rate_valid, unsigned long rate)
+{
+    int  status      = 0;
+    bool prev_enable = __clk_is_enabled(this->clk);
+    bool next_enable = (enable_valid == true) ? enable : prev_enable;
+
+    if ((rate_valid == true) && (prev_enable == true)) {
+        if (0 != (status = __fclk_set_enable(this, false)))
+            return status;
+        prev_enable = false;
+    }
+    if (rate_valid == true) {
+        if (0 != (status = __fclk_set_rate(this, rate)))
+            return status;
+    }
+    if (prev_enable != next_enable) {
+        if (0 != (status = __fclk_set_enable(this, next_enable)))
+            return status;
+    }
+    return status;
+}
 
 /**
  * fclk_show_enable()
@@ -168,7 +192,7 @@ static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, 
     if (0 != (get_status = kstrtoul(buf, 0, &rate)))
         return get_status;
 
-    if (0 != (set_status = __fclk_set_rate(this, rate)))
+    if (0 != (set_status = __fclk_change_status(this, false, false, true, rate)))
         return (ssize_t)set_status;
 
     return size;
@@ -241,6 +265,10 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     struct fclk_driver_data* this   = NULL;
     const char*              device_name;
     struct clk*              resource_clk = NULL;
+    bool                     insert_enable_valid = false;
+    bool                     insert_enable       = false;
+    bool                     insert_rate_valid   = false;
+    unsigned long            insert_rate         = 0;
 
     dev_dbg(&pdev->dev, "driver probe start.\n");
     /*
@@ -361,10 +389,11 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
             unsigned long rate;
             if (0 != (prop_status = kstrtoul(prop, 0, &rate)))
                 dev_err(&pdev->dev, "invalid insert-rate.\n");
-            else
-                __fclk_set_rate(this, rate);
+            else {
+                insert_rate_valid = true;
+                insert_rate       = rate;
+            }
         }
-        this->insert_rate = clk_get_rate(this->clk);
     }
     dev_dbg(&pdev->dev, "get insert-rate done.\n");
     
@@ -378,13 +407,24 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
 
         status = of_property_read_u32(pdev->dev.of_node, "insert-enable", &enable);
 
-        if (status == 0)
-            __fclk_set_enable(this, (enable != 0));
-        
-        this->insert_enable = __clk_is_enabled(this->clk);
+        if (status == 0) {
+            insert_enable_valid = true;
+            insert_enable       = (enable != 0);
+        }
     }
     dev_dbg(&pdev->dev, "get insert-rate done.\n");
     
+    /*
+     * change_status
+     */
+    __fclk_change_status(this,
+                         insert_enable_valid,
+                         insert_enable,
+                         insert_rate_valid,
+                         insert_rate);
+    this->insert_enable = __clk_is_enabled(this->clk);
+    this->insert_rate   = clk_get_rate(this->clk);
+
     /*
      * remove_rate
      */
@@ -485,14 +525,11 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
     if (!this)
         return -ENODEV;
     if (this->clk          ) {
-        if (this->remove_rate_valid == true) {
-            __fclk_set_rate(this, this->remove_rate);
-            dev_info(&pdev->dev, "change rate    : %lu\n", clk_get_rate(this->clk));
-        }
-        if (this->remove_enable_valid == true) {
-            __fclk_set_enable(this, this->remove_enable);
-            dev_info(&pdev->dev, "change enable  : %d\n" , __clk_is_enabled(this->clk));
-        }
+        __fclk_change_status(this,
+                             this->remove_enable_valid,
+                             this->remove_enable,
+                             this->remove_rate_valid,
+                             this->remove_rate);
         clk_put(this->clk);
         this->clk = NULL;
     }
