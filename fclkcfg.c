@@ -571,14 +571,22 @@ static struct platform_driver fclkcfg_platform_driver = {
 static bool fclkcfg_platform_driver_done = 0;
 
 /**
- * fclk_module_exit()
+ * fclk_module_clean()
  */
-static void __exit fclkcfg_module_exit(void)
+static void _fclkcfg_module_exit(void)
 {
     if (fclkcfg_platform_driver_done ){platform_driver_unregister(&fclkcfg_platform_driver);}
     if (fclkcfg_sys_class     != NULL){class_destroy(fclkcfg_sys_class);}
     if (fclkcfg_device_number != 0   ){unregister_chrdev_region(fclkcfg_device_number, 0);}
     ida_destroy(&fclkcfg_device_ida);
+}
+
+/**
+ * fclk_module_exit()
+ */
+static void __exit fclkcfg_module_exit(void)
+{
+    _fclkcfg_module_exit();
 }
 
 /**
@@ -615,7 +623,7 @@ static int __init fclkcfg_module_init(void)
     return 0;
 
  failed:
-    fclkcfg_module_exit();
+    _fclkcfg_module_exit();
     return retval;
 }
 
