@@ -46,7 +46,7 @@
 #include <linux/version.h>
 
 #define DRIVER_NAME        "fclkcfg"
-#define DRIVER_VERSION     "1.4.0-rc.3"
+#define DRIVER_VERSION     "1.4.0-rc.4"
 #define DEVICE_MAX_NUM      32
 
 #if     (LINUX_VERSION_CODE >= 0x030B00)
@@ -106,9 +106,9 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
 }
 
 /**
- * struct fclk_driver_data - Device driver structure
+ * struct fclk_device_data - Device driver structure
  */
-struct fclk_driver_data {
+struct fclk_device_data {
     struct device*       device;
     struct clk*          clk;
     dev_t                device_number;
@@ -120,7 +120,7 @@ struct fclk_driver_data {
 /**
  * __fclk_set_enable()
  */
-static int __fclk_set_enable(struct fclk_driver_data* this, bool enable)
+static int __fclk_set_enable(struct fclk_device_data* this, bool enable)
 {
     int status = 0;
 
@@ -144,7 +144,7 @@ static int __fclk_set_enable(struct fclk_driver_data* this, bool enable)
 /**
  * __fclk_set_rate()
  */
-static int __fclk_set_rate(struct fclk_driver_data* this, unsigned long rate)
+static int __fclk_set_rate(struct fclk_device_data* this, unsigned long rate)
 {
     int           status;
     unsigned long round_rate;
@@ -163,7 +163,7 @@ static int __fclk_set_rate(struct fclk_driver_data* this, unsigned long rate)
 /**
  * __fclk_change_status()
  */
-static int __fclk_change_status(struct fclk_driver_data* this, struct fclk_state* next)
+static int __fclk_change_status(struct fclk_device_data* this, struct fclk_state* next)
 {
     int  retval      = 0;
     bool prev_enable = __clk_is_enabled(this->clk);
@@ -198,7 +198,7 @@ static ssize_t fclk_show_driver_version(struct device *dev, struct device_attrib
  */
 static ssize_t fclk_show_enable(struct device *dev, struct device_attribute *attr, char *buf)
 {
-    struct fclk_driver_data* this = dev_get_drvdata(dev);
+    struct fclk_device_data* this = dev_get_drvdata(dev);
     return sprintf(buf, "%d\n", __clk_is_enabled(this->clk));
 }
 
@@ -210,7 +210,7 @@ static ssize_t fclk_set_enable(struct device *dev, struct device_attribute *attr
     ssize_t       get_status = 0;
     int           set_status = 0;
     unsigned long enable;
-    struct fclk_driver_data* this = dev_get_drvdata(dev);
+    struct fclk_device_data* this = dev_get_drvdata(dev);
 
     if (0 != (get_status = kstrtoul(buf, 0, &enable)))
         return get_status;
@@ -226,7 +226,7 @@ static ssize_t fclk_set_enable(struct device *dev, struct device_attribute *attr
  */
 static ssize_t fclk_show_rate(struct device *dev, struct device_attribute *attr, char *buf)
 {
-    struct fclk_driver_data* this = dev_get_drvdata(dev);
+    struct fclk_device_data* this = dev_get_drvdata(dev);
     return sprintf(buf, "%lu\n", clk_get_rate(this->clk));
 }
 
@@ -238,7 +238,7 @@ static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, 
     ssize_t            get_result;
     int                set_result;
     struct fclk_state  next_state;
-    struct fclk_driver_data* this = dev_get_drvdata(dev);
+    struct fclk_device_data* this = dev_get_drvdata(dev);
 
     if (0 != (get_result = kstrtoul(buf, 0, &next_state.rate)))
         return get_result;
@@ -258,7 +258,7 @@ static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, 
  */
 static ssize_t fclk_show_round_rate(struct device *dev, struct device_attribute *attr, char *buf)
 {
-    struct fclk_driver_data* this = dev_get_drvdata(dev);
+    struct fclk_device_data* this = dev_get_drvdata(dev);
     return sprintf(buf, "%lu => %lu\n",
                    this->round_rate,
                    clk_round_rate(this->clk, this->round_rate)
@@ -272,7 +272,7 @@ static ssize_t fclk_set_round_rate(struct device *dev, struct device_attribute *
 {
     ssize_t       status;
     unsigned long round_rate;
-    struct fclk_driver_data* this = dev_get_drvdata(dev);
+    struct fclk_device_data* this = dev_get_drvdata(dev);
 
     if (0 != (status = kstrtoul(buf, 0, &round_rate)))
         return status;
@@ -318,13 +318,13 @@ static const struct attribute_group* fclkcfg_attr_groups[] = {
 static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
 {
     int                      retval = 0;
-    struct fclk_driver_data* this   = NULL;
+    struct fclk_device_data* this   = NULL;
     const char*              device_name;
     struct clk*              resource_clk = NULL;
 
     dev_dbg(&pdev->dev, "driver probe start.\n");
     /*
-     * create (fclk_driver_data*) this.
+     * create (fclk_device_data*) this.
      */
     {
         this = kzalloc(sizeof(*this), GFP_KERNEL);
@@ -495,7 +495,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
  */
 static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
 {
-    struct fclk_driver_data* this = dev_get_drvdata(&pdev->dev);
+    struct fclk_device_data* this = dev_get_drvdata(&pdev->dev);
 
     if (!this)
         return -ENODEV;
