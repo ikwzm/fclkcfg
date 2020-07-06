@@ -46,7 +46,7 @@
 #include <linux/version.h>
 
 #define DRIVER_NAME        "fclkcfg"
-#define DRIVER_VERSION     "1.4.0-rc.4"
+#define DRIVER_VERSION     "1.4.0-rc.5"
 #define DEVICE_MAX_NUM      32
 
 #if     (LINUX_VERSION_CODE >= 0x030B00)
@@ -542,9 +542,9 @@ static struct platform_driver fclkcfg_platform_driver = {
 static bool fclkcfg_platform_driver_done = 0;
 
 /**
- * fclk_module_clean()
+ * fclkcfg_module_cleanup()
  */
-static void _fclkcfg_module_exit(void)
+static void fclkcfg_module_cleanup(void)
 {
     if (fclkcfg_platform_driver_done ){platform_driver_unregister(&fclkcfg_platform_driver);}
     if (fclkcfg_sys_class     != NULL){class_destroy(fclkcfg_sys_class);}
@@ -557,7 +557,7 @@ static void _fclkcfg_module_exit(void)
  */
 static void __exit fclkcfg_module_exit(void)
 {
-    _fclkcfg_module_exit();
+    fclkcfg_module_cleanup();
 }
 
 /**
@@ -594,7 +594,7 @@ static int __init fclkcfg_module_init(void)
     return 0;
 
  failed:
-    _fclkcfg_module_exit();
+    fclkcfg_module_cleanup();
     return retval;
 }
 
