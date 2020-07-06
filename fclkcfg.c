@@ -57,7 +57,7 @@
 
 static struct class*  fclkcfg_sys_class     = NULL;
 static dev_t          fclk_device_number = 0;
-static DEFINE_IDA(    fclkcfg_device_ida );
+static DEFINE_IDA(    fclk_device_ida );
 
 /**
  * struct fclk_state - fclk state data
@@ -342,7 +342,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
      */
     dev_dbg(&pdev->dev, "get device_number start.\n");
     {
-        int minor_number = ida_simple_get(&fclkcfg_device_ida, 0, DEVICE_MAX_NUM, GFP_KERNEL);
+        int minor_number = ida_simple_get(&fclk_device_ida, 0, DEVICE_MAX_NUM, GFP_KERNEL);
         if (minor_number < 0) {
             dev_err(&pdev->dev, "invalid or conflict minor number %d.\n", minor_number);
             retval = -ENODEV;
@@ -476,7 +476,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
             this->device = NULL;
         }
         if (this->device_number){
-            ida_simple_remove(&fclkcfg_device_ida, MINOR(this->device_number));
+            ida_simple_remove(&fclk_device_ida, MINOR(this->device_number));
             this->device_number = 0;
         }
         kfree(this);
@@ -509,7 +509,7 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
         this->device = NULL;
     }
     if (this->device_number){
-        ida_simple_remove(&fclkcfg_device_ida, MINOR(this->device_number));
+        ida_simple_remove(&fclk_device_ida, MINOR(this->device_number));
         this->device_number = 0;
     }
     kfree(this);
@@ -549,7 +549,7 @@ static void fclkcfg_module_cleanup(void)
     if (fclkcfg_platform_driver_done ){platform_driver_unregister(&fclkcfg_platform_driver);}
     if (fclkcfg_sys_class     != NULL){class_destroy(fclkcfg_sys_class);}
     if (fclk_device_number    != 0   ){unregister_chrdev_region(fclk_device_number, 0);}
-    ida_destroy(&fclkcfg_device_ida);
+    ida_destroy(&fclk_device_ida);
 }
 
 /**
@@ -567,7 +567,7 @@ static int __init fclkcfg_module_init(void)
 {
     int retval = 0;
 
-    ida_init(&fclkcfg_device_ida);
+    ida_init(&fclk_device_ida);
 
     retval = alloc_chrdev_region(&fclk_device_number, 0, 0, DRIVER_NAME);
     if (retval != 0) {
