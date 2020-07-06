@@ -46,7 +46,7 @@
 #include <linux/version.h>
 
 #define DRIVER_NAME        "fclkcfg"
-#define DRIVER_VERSION     "1.4.0-rc.2"
+#define DRIVER_VERSION     "1.4.0-rc.3"
 #define DEVICE_MAX_NUM      32
 
 #if     (LINUX_VERSION_CODE >= 0x030B00)
@@ -60,16 +60,16 @@ static dev_t          fclkcfg_device_number = 0;
 static DEFINE_IDA(    fclkcfg_device_ida );
 
 /**
- * struct fclk_status - fclk status data
+ * struct fclk_state - fclk state data
  */
-struct fclk_status {
+struct fclk_state {
     unsigned long        rate;
     bool                 enable;
     bool                 rate_valid;
     bool                 enable_valid;
 };
 
-static void of_get_fclk_status(struct device* dev, const char* rate_name, const char* enable_name, struct fclk_status* status)
+static void of_get_fclk_state(struct device* dev, const char* rate_name, const char* enable_name, struct fclk_state* state)
 {
     dev_dbg(dev, "get %s start.\n", rate_name);
     {
@@ -83,8 +83,8 @@ static void of_get_fclk_status(struct device* dev, const char* rate_name, const 
             if (0 != (prop_status = kstrtoul(prop, 0, &rate))) {
                 dev_err(dev, "invalid %s.\n", rate_name);
             } else {
-                status->rate_valid = true;
-                status->rate       = rate;
+                state->rate_valid = true;
+                state->rate       = rate;
             }
         }
     }
@@ -98,8 +98,8 @@ static void of_get_fclk_status(struct device* dev, const char* rate_name, const 
         retval = of_property_read_u32(dev->of_node, enable_name, &enable);
 
         if (retval == 0) {
-            status->enable_valid = true;
-            status->enable       = (enable != 0);
+            state->enable_valid = true;
+            state->enable       = (enable != 0);
         }
     }
     dev_dbg(dev, "get %s done.\n", enable_name);
@@ -113,8 +113,8 @@ struct fclk_driver_data {
     struct clk*          clk;
     dev_t                device_number;
     unsigned long        round_rate;
-    struct fclk_status   insert;
-    struct fclk_status   remove;
+    struct fclk_state    insert;
+    struct fclk_state    remove;
 };
 
 /**
@@ -163,7 +163,7 @@ static int __fclk_set_rate(struct fclk_driver_data* this, unsigned long rate)
 /**
  * __fclk_change_status()
  */
-static int __fclk_change_status(struct fclk_driver_data* this, struct fclk_status* next)
+static int __fclk_change_status(struct fclk_driver_data* this, struct fclk_state* next)
 {
     int  retval      = 0;
     bool prev_enable = __clk_is_enabled(this->clk);
@@ -237,13 +237,17 @@ static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, 
 {
     ssize_t            get_result;
     int                set_result;
-    struct fclk_status next = {.rate = 0, .rate_valid = true, .enable = false, .enable_valid = false};
+    struct fclk_state  next_state;
     struct fclk_driver_data* this = dev_get_drvdata(dev);
 
-    if (0 != (get_result = kstrtoul(buf, 0, &next.rate)))
+    if (0 != (get_result = kstrtoul(buf, 0, &next_state.rate)))
         return get_result;
 
-    if (0 != (set_result = __fclk_change_status(this, &next)))
+    next_state.rate_valid   = true;
+    next_state.enable       = false;
+    next_state.enable_valid = false;
+
+    if (0 != (set_result = __fclk_change_status(this, &next_state)))
         return (ssize_t)set_result;
 
     return size;
@@ -424,9 +428,9 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     }
     dev_dbg(&pdev->dev, "of_clk_get(1) done.\n");
     /*
-     * get insert status
+     * get insert state
      */
-    of_get_fclk_status(&pdev->dev, "insert-rate", "insert-enable", &this->insert);
+    of_get_fclk_state(&pdev->dev, "insert-rate", "insert-enable", &this->insert);
     
     /*
      * change_status
@@ -436,9 +440,9 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     this->insert.rate   = clk_get_rate(this->clk);
 
     /*
-     * get remove status
+     * get remove state
      */
-    of_get_fclk_status(&pdev->dev, "remove-rate", "remove-enable", &this->remove);
+    of_get_fclk_state(&pdev->dev, "remove-rate", "remove-enable", &this->remove);
 
     dev_info(&pdev->dev, "driver installed.\n");
     dev_info(&pdev->dev, "driver version : %s\n" , DRIVER_VERSION);
