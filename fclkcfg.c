@@ -1,6 +1,6 @@
 /*********************************************************************************
  *
- *       Copyright (C) 2016-2019 Ichiro Kawazome
+ *       Copyright (C) 2016-2020 Ichiro Kawazome
  *       All rights reserved.
  * 
  *       Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,7 @@
 #include <linux/version.h>
 
 #define DRIVER_NAME        "fclkcfg"
+#define DRIVER_VERSION     "1.4.0-rc.1"
 #define DEVICE_MAX_NUM      32
 
 #if     (LINUX_VERSION_CODE >= 0x030B00)
@@ -143,6 +144,14 @@ static int __fclk_change_status(struct fclk_driver_data* this, bool enable_valid
 }
 
 /**
+ * fclk_show_driver_version()
+ */
+static ssize_t fclk_show_driver_version(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%s\n", DRIVER_VERSION);
+}
+
+/**
  * fclk_show_enable()
  */
 static ssize_t fclk_show_enable(struct device *dev, struct device_attribute *attr, char *buf)
@@ -226,9 +235,10 @@ static ssize_t fclk_set_round_rate(struct device *dev, struct device_attribute *
 }
 
 static struct device_attribute fclkcfg_device_attrs[] = {
-  __ATTR(enable    , 0664, fclk_show_enable    , fclk_set_enable    ),
-  __ATTR(rate      , 0664, fclk_show_rate      , fclk_set_rate      ),
-  __ATTR(round_rate, 0664, fclk_show_round_rate, fclk_set_round_rate),
+  __ATTR(driver_version , 0444, fclk_show_driver_version, NULL               ),
+  __ATTR(enable         , 0664, fclk_show_enable        , fclk_set_enable    ),
+  __ATTR(rate           , 0664, fclk_show_rate          , fclk_set_rate      ),
+  __ATTR(round_rate     , 0664, fclk_show_round_rate    , fclk_set_round_rate),
   __ATTR_NULL,
 };
 
@@ -472,6 +482,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     dev_set_drvdata(&pdev->dev, this);
 
     dev_info(&pdev->dev, "driver installed.\n");
+    dev_info(&pdev->dev, "driver version : %s\n" , DRIVER_VERSION);
     dev_info(&pdev->dev, "device name    : %s\n" , device_name);
     dev_info(&pdev->dev, "clock  name    : %s\n" , __clk_get_name(this->clk));
     if (!IS_ERR_OR_NULL(resource_clk)) {
