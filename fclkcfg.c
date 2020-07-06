@@ -161,9 +161,9 @@ static int __fclk_set_rate(struct fclk_device_data* this, unsigned long rate)
 }
 
 /**
- * __fclk_change_status()
+ * __fclk_change_state()
  */
-static int __fclk_change_status(struct fclk_device_data* this, struct fclk_state* next)
+static int __fclk_change_state(struct fclk_device_data* this, struct fclk_state* next)
 {
     int  retval      = 0;
     bool prev_enable = __clk_is_enabled(this->clk);
@@ -247,7 +247,7 @@ static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, 
     next_state.enable       = false;
     next_state.enable_valid = false;
 
-    if (0 != (set_result = __fclk_change_status(this, &next_state)))
+    if (0 != (set_result = __fclk_change_state(this, &next_state)))
         return (ssize_t)set_result;
 
     return size;
@@ -435,7 +435,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     /*
      * change_status
      */
-    __fclk_change_status(this, &this->insert);
+    __fclk_change_state(this, &this->insert);
     this->insert.enable = __clk_is_enabled(this->clk);
     this->insert.rate   = clk_get_rate(this->clk);
 
@@ -500,7 +500,7 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
     if (!this)
         return -ENODEV;
     if (this->clk          ) {
-        __fclk_change_status(this, &this->remove);
+        __fclk_change_state(this, &this->remove);
         clk_put(this->clk);
         this->clk = NULL;
     }
