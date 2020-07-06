@@ -46,7 +46,7 @@
 #include <linux/version.h>
 
 #define DRIVER_NAME        "fclkcfg"
-#define DRIVER_VERSION     "1.4.0-rc.5"
+#define DRIVER_VERSION     "1.4.0"
 #define DEVICE_MAX_NUM      32
 
 #if     (LINUX_VERSION_CODE >= 0x030B00)
