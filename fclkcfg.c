@@ -56,7 +56,7 @@
 #endif
 
 static struct class*  fclkcfg_sys_class     = NULL;
-static dev_t          fclkcfg_device_number = 0;
+static dev_t          fclk_device_number = 0;
 static DEFINE_IDA(    fclkcfg_device_ida );
 
 /**
@@ -348,7 +348,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
             retval = -ENODEV;
             goto failed;
         }
-        this->device_number = MKDEV(MAJOR(fclkcfg_device_number), minor_number);
+        this->device_number = MKDEV(MAJOR(fclk_device_number), minor_number);
     }
     dev_dbg(&pdev->dev, "get device_number done.\n");
 
@@ -548,7 +548,7 @@ static void fclkcfg_module_cleanup(void)
 {
     if (fclkcfg_platform_driver_done ){platform_driver_unregister(&fclkcfg_platform_driver);}
     if (fclkcfg_sys_class     != NULL){class_destroy(fclkcfg_sys_class);}
-    if (fclkcfg_device_number != 0   ){unregister_chrdev_region(fclkcfg_device_number, 0);}
+    if (fclk_device_number    != 0   ){unregister_chrdev_region(fclk_device_number, 0);}
     ida_destroy(&fclkcfg_device_ida);
 }
 
@@ -569,10 +569,10 @@ static int __init fclkcfg_module_init(void)
 
     ida_init(&fclkcfg_device_ida);
 
-    retval = alloc_chrdev_region(&fclkcfg_device_number, 0, 0, DRIVER_NAME);
+    retval = alloc_chrdev_region(&fclk_device_number, 0, 0, DRIVER_NAME);
     if (retval != 0) {
         printk(KERN_ERR "%s: couldn't allocate device major number\n", DRIVER_NAME);
-        fclkcfg_device_number = 0;
+        fclk_device_number = 0;
         goto failed;
     }
 
