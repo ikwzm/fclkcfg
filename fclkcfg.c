@@ -45,8 +45,16 @@
 #include <linux/fs.h>
 #include <linux/version.h>
 
+/**
+ * DOC: fclkcfg constants 
+ */
+
+MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
+MODULE_AUTHOR("ikwzm");
+MODULE_LICENSE("Dual BSD/GPL");
+
+#define DRIVER_VERSION     "1.5.0-rc.1"
 #define DRIVER_NAME        "fclkcfg"
-#define DRIVER_VERSION     "1.4.0"
 #define DEVICE_MAX_NUM      32
 
 #if     (LINUX_VERSION_CODE >= 0x030B00)
@@ -55,12 +63,37 @@
 #define USE_DEV_GROUPS      0
 #endif
 
-static struct class*  fclkcfg_sys_class     = NULL;
-static dev_t          fclk_device_number = 0;
-static DEFINE_IDA(    fclk_device_ida );
+/**
+ * DOC: fclkcfg static variables
+ *
+ * * fclkcfg_sys_class  - fclkcfg system class.
+ * * init_enable        - fclkcfg install/uninstall infomation enable.
+ */
 
 /**
- * struct fclk_state - fclk state data
+ * fclkcfg_sys_class  - fclkcfg system class.
+ */
+static struct class*  fclkcfg_sys_class = NULL;
+
+/**
+ * info_enable        - fclkcfg install/uninstall infomation enable.
+ */
+static int            info_enable = 1;
+module_param(         info_enable , int, S_IRUGO);
+MODULE_PARM_DESC(     info_enable , DRIVER_NAME " install/uninstall infomation enable");
+
+/**
+ * DOC: fclk state structure
+ *
+ * This section defines the structure of fclk state.
+ *
+ * * struct fclk_state   - fclk state data structure.
+ * * of_get_fclk_state() - get rate or enable property from device tree.
+ *
+ */
+
+/**
+ * struct fclk_state - fclk state data structure.
  */
 struct fclk_state {
     unsigned long        rate;
@@ -69,6 +102,14 @@ struct fclk_state {
     bool                 enable_valid;
 };
 
+/**
+ * of_get_fclk_state()  - get rate or enable property from device tree.
+ * @dev:         handle to the device structure.
+ * @rate_name:   rate property name
+ * @enable_name: enable property name
+ * @state:       address of fclk state data.
+ * Return:       Success(=0) or error status(<0).
+ */
 static void of_get_fclk_state(struct device* dev, const char* rate_name, const char* enable_name, struct fclk_state* state)
 {
     dev_dbg(dev, "get %s start.\n", rate_name);
@@ -106,11 +147,18 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
 }
 
 /**
- * struct fclk_device_data - Device driver structure
+ * DOC: fclk device data structure
+ *
+ * This section defines the structure of fclk device data.
+ *
+ */
+/**
+ * struct fclk_device_data - fclk device data structure.
  */
 struct fclk_device_data {
     struct device*       device;
     struct clk*          clk;
+    struct clk*          resource_clk;
     dev_t                device_number;
     unsigned long        round_rate;
     struct fclk_state    insert;
@@ -118,7 +166,22 @@ struct fclk_device_data {
 };
 
 /**
- * __fclk_set_enable()
+ * DOC: fclk device clock operations
+ *
+ * This section defines the clock operation.
+ *
+ * * __fclk_set_enable()    - enable/disable clock.
+ * * __fclk_set_rate()      - set clock rate.
+ * * __fclk_change_state()  - change clock state.
+ *
+ */
+/**
+ * __fclk_set_enable() - enable/disable clock.
+ *
+ * @this:       Pointer to the fclk device data.
+ * @enable:	enable/disable value.
+ * Return:      Success(=0) or error status(<0).
+ *
  */
 static int __fclk_set_enable(struct fclk_device_data* this, bool enable)
 {
@@ -142,7 +205,12 @@ static int __fclk_set_enable(struct fclk_device_data* this, bool enable)
 }
 
 /**
- * __fclk_set_rate()
+ * __fclk_set_rate() - set clock rate.
+ *
+ * @this:       Pointer to the fclk device data.
+ * @rate:       rate.
+ * Return:      Success(=0) or error status(<0).
+ *
  */
 static int __fclk_set_rate(struct fclk_device_data* this, unsigned long rate)
 {
@@ -161,7 +229,12 @@ static int __fclk_set_rate(struct fclk_device_data* this, unsigned long rate)
 }
 
 /**
- * __fclk_change_state()
+ * __fclk_change_state() - change clock state.
+ *
+ * @this:       Pointer to the fclk device data.
+ * @next:	next state to change.
+ * Return:      Success(=0) or error status(<0).
+ *
  */
 static int __fclk_change_state(struct fclk_device_data* this, struct fclk_state* next)
 {
@@ -184,6 +257,21 @@ static int __fclk_change_state(struct fclk_device_data* this, struct fclk_state*
     }
     return retval;
 }
+
+/**
+ * DOC: fclkcfg system class device file description
+ *
+ * This section define the device file created in system class when fclkcfg is 
+ * loaded into the kernel.
+ *
+ * The device file created in system class is as follows.
+ *
+ * * /sys/class/udmabuf/<device-name>/driver_version
+ * * /sys/class/udmabuf/<device-name>/enable
+ * * /sys/class/udmabuf/<device-name>/rate
+ * * /sys/class/udmabuf/<device-name>/round_rate
+ * * 
+ */
 
 /**
  * fclk_show_driver_version()
@@ -235,9 +323,9 @@ static ssize_t fclk_show_rate(struct device *dev, struct device_attribute *attr,
  */
 static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-    ssize_t            get_result;
-    int                set_result;
-    struct fclk_state  next_state;
+    ssize_t                  get_result;
+    int                      set_result;
+    struct fclk_state        next_state;
     struct fclk_device_data* this = dev_get_drvdata(dev);
 
     if (0 != (get_result = kstrtoul(buf, 0, &next_state.rate)))
@@ -308,21 +396,90 @@ static const struct attribute_group* fclkcfg_attr_groups[] = {
 #endif
 
 /**
- * fclkcfg_platform_driver_probe() -  Probe call for the device.
+ * DOC: fclk device data operations
  *
- * @pdev:	handle to the platform device structure.
- * Returns 0 on success, negative error otherwise.
+ * This section defines the operation of fclk device data.
  *
- * It does all the memory allocation and registration for the device.
+ * * fclk_device_number      - fclk device major number.
+ * * fclk_device_ida         - fclk device minor number allocator variable.
+ * * fclk_device_info()      - Print infomation the fclk device data.
+ * * fclk_device_create()    - Create fclk device data.
+ * * fclk_device_destroy()   - Destroy the fclk device data.
  */
-static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
+static dev_t          fclk_device_number = 0;
+static DEFINE_IDA(    fclk_device_ida );
+
+/**
+ * fclk_device_info() -  Print infomation the fclk device data.
+ *
+ * @this:       Pointer to the fclk device data.
+ * @pdev:	handle to the platform device structure or NULL.
+ *
+ */
+static void fclk_device_info(struct fclk_device_data* this, struct platform_device* pdev)
+{
+    struct device* dev = (pdev != NULL)? &pdev->dev : this->device;
+
+    dev_info(dev, "driver version : %s\n" , DRIVER_VERSION);
+    dev_info(dev, "device name    : %s\n" , dev_name(this->device));
+    dev_info(dev, "clock  name    : %s\n" , __clk_get_name(this->clk));
+    if (this->resource_clk != NULL)
+        dev_info(dev, "resource clock : %s\n", __clk_get_name(this->resource_clk));
+    dev_info(dev, "clock  rate    : %lu\n", clk_get_rate(this->clk));
+    dev_info(dev, "clock  enabled : %d\n" , __clk_is_enabled(this->clk));
+    if (this->remove.rate_valid == true)
+        dev_info(dev, "remove rate    : %lu\n", this->remove.rate);
+    if (this->remove.enable_valid == true)
+        dev_info(dev, "remove enable  : %d\n" , this->remove.enable);
+           
+}
+
+/**
+ * fclk_device_destroy() - Destroy the fclk device data.
+ *
+ * @this:       Pointer to the fclk device data.
+ * Return:      Success(=0) or error status(<0).
+ *
+ */
+static int fclk_device_destroy(struct fclk_device_data* this)
+{
+    if (!this)
+        return -ENODEV;
+
+    if (this->clk          ) {
+        clk_put(this->clk);
+        this->clk = NULL;
+    }
+    if (this->resource_clk ) {
+        clk_put(this->resource_clk);
+        this->resource_clk = NULL;
+    }
+    if (this->device       ) {
+        device_destroy(fclkcfg_sys_class, this->device_number);
+        this->device = NULL;
+    }
+    if (this->device_number) {
+        ida_simple_remove(&fclk_device_ida, MINOR(this->device_number));
+        this->device_number = 0;
+    }
+    kfree(this);
+    return 0;
+}
+
+/**
+ * fclk_device_create() -  Create fclk device data.
+ *
+ * @dev:        handle to the device structure.
+ * Return:      Pointer to the fclk device data or NULL.
+ *
+ */
+static struct fclk_device_data* fclk_device_create(struct device *dev)
 {
     int                      retval = 0;
     struct fclk_device_data* this   = NULL;
     const char*              device_name;
-    struct clk*              resource_clk = NULL;
 
-    dev_dbg(&pdev->dev, "driver probe start.\n");
+    dev_dbg(dev, "driver probe start.\n");
     /*
      * create (fclk_device_data*) this.
      */
@@ -340,50 +497,50 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     /*
      * get device number
      */
-    dev_dbg(&pdev->dev, "get device_number start.\n");
+    dev_dbg(dev, "get device_number start.\n");
     {
         int minor_number = ida_simple_get(&fclk_device_ida, 0, DEVICE_MAX_NUM, GFP_KERNEL);
         if (minor_number < 0) {
-            dev_err(&pdev->dev, "invalid or conflict minor number %d.\n", minor_number);
+            dev_err(dev, "invalid or conflict minor number %d.\n", minor_number);
             retval = -ENODEV;
             goto failed;
         }
         this->device_number = MKDEV(MAJOR(fclk_device_number), minor_number);
     }
-    dev_dbg(&pdev->dev, "get device_number done.\n");
+    dev_dbg(dev, "get device_number done.\n");
 
     /*
      * get clk
      */
-    dev_dbg(&pdev->dev, "of_clk_get(0) start.\n");
+    dev_dbg(dev, "of_clk_get(0) start.\n");
     {
-        this->clk = of_clk_get(pdev->dev.of_node, 0);
+        this->clk = of_clk_get(dev->of_node, 0);
         if (IS_ERR_OR_NULL(this->clk)) {
-            dev_err(&pdev->dev, "of_clk_get(0) failed.\n");
+            dev_err(dev, "of_clk_get(0) failed.\n");
             retval = PTR_ERR(this->clk);
             this->clk = NULL;
             goto failed;
         }
     }    
-    dev_dbg(&pdev->dev, "of_clk_get(0) done.\n");
+    dev_dbg(dev, "of_clk_get(0) done.\n");
 
     /*
      * get device name
      */
-    dev_dbg(&pdev->dev, "get device name start.\n");
+    dev_dbg(dev, "get device name start.\n");
     {
-        device_name = of_get_property(pdev->dev.of_node, "device-name", NULL);
+        device_name = of_get_property(dev->of_node, "device-name", NULL);
         
         if (IS_ERR_OR_NULL(device_name)) {
-            device_name = dev_name(&pdev->dev);
+            device_name = dev_name(dev);
         }
     }
-    dev_dbg(&pdev->dev, "get device name done.\n");
+    dev_dbg(dev, "get device name done.\n");
 
     /*
      * create device
      */
-    dev_dbg(&pdev->dev, "device_create start.\n");
+    dev_dbg(dev, "device_create start.\n");
     {
         this->device = device_create(fclkcfg_sys_class,
                                      NULL,
@@ -391,49 +548,51 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
                                      (void *)this,
                                      device_name);
         if (IS_ERR_OR_NULL(this->device)) {
-            dev_err(&pdev->dev, "device create falied.\n");
+            dev_err(dev, "device create falied.\n");
             this->device = NULL;
             goto failed;
         }
     }
-    dev_dbg(&pdev->dev, "device_create done\n");
+    dev_dbg(dev, "device_create done\n");
 
     /*
      * get resource clock
      */
-    dev_dbg(&pdev->dev, "of_clk_get(1) start.\n");
+    dev_dbg(dev, "of_clk_get(1) start.\n");
     {
-        resource_clk = of_clk_get(pdev->dev.of_node, 1);
-        if (!IS_ERR_OR_NULL(resource_clk)) {
+        this->resource_clk = of_clk_get(dev->of_node, 1);
+        if (IS_ERR_OR_NULL(this->resource_clk)) {
+            this->resource_clk = NULL;
+        } else {
             int         set_parent_status  = 0;
             bool        found_resource_clk = false;
             struct clk* curr_clk           = this->clk;
             while (!IS_ERR_OR_NULL(curr_clk)) {
-                if (clk_has_parent(curr_clk, resource_clk) == true) {
+                if (clk_has_parent(curr_clk, this->resource_clk) == true) {
                     found_resource_clk = true;
-                    set_parent_status  = clk_set_parent(curr_clk, resource_clk);
+                    set_parent_status  = clk_set_parent(curr_clk, this->resource_clk);
                     break;
                 }
                 curr_clk = clk_get_parent(curr_clk);
             }
             if (set_parent_status != 0) {
-                dev_err(&pdev->dev, "clk_set_parent(%s, %s) failed.\n" , __clk_get_name(curr_clk), __clk_get_name(resource_clk));
+                dev_err(dev, "clk_set_parent(%s, %s) failed.\n" , __clk_get_name(curr_clk), __clk_get_name(this->resource_clk));
                 goto failed;
             }
             if (found_resource_clk == false) {
-                dev_err(&pdev->dev, "%s is not resource clock of %s.\n", __clk_get_name(resource_clk), __clk_get_name(this->clk));
+                dev_err(dev, "%s is not resource clock of %s.\n", __clk_get_name(this->resource_clk), __clk_get_name(this->clk));
                 goto failed;
             }
         }
     }
-    dev_dbg(&pdev->dev, "of_clk_get(1) done.\n");
+    dev_dbg(dev, "of_clk_get(1) done.\n");
     /*
      * get insert state
      */
-    of_get_fclk_state(&pdev->dev, "insert-rate", "insert-enable", &this->insert);
+    of_get_fclk_state(dev, "insert-rate", "insert-enable", &this->insert);
     
     /*
-     * change_status
+     * change state
      */
     __fclk_change_state(this, &this->insert);
     this->insert.enable = __clk_is_enabled(this->clk);
@@ -442,45 +601,58 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     /*
      * get remove state
      */
-    of_get_fclk_state(&pdev->dev, "remove-rate", "remove-enable", &this->remove);
+    of_get_fclk_state(dev, "remove-rate", "remove-enable", &this->remove);
+
+    return this;
+
+ failed:
+    fclk_device_destroy(this);
+    return ERR_PTR(retval);
+}
+
+
+/**
+ * DOC: fclkcfg Platform Driver
+ *
+ * This section defines the fclkcfg platform driver.
+ *
+ * * fclkcfg_platform_driver_probe()   - Probe call for the device.
+ * * fclkcfg_platform_driver_remove()  - Remove call for the device.
+ * * fclkcfg_of_match                  - Open Firmware Device Identifier Matching Table.
+ * * fclkcfg_platform_driver           - Platform Driver Structure.
+ */
+
+/**
+ * fclkcfg_platform_driver_probe() -  Probe call for the device.
+ *
+ * @pdev:	handle to the platform device structure.
+ * Returns 0 on success, negative error otherwise.
+ *
+ * It does all the memory allocation and registration for the device.
+ */
+static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
+{
+    int                      retval = 0;
+    struct fclk_device_data* data;
+
+    data = fclk_device_create(&pdev->dev);
+    if (IS_ERR_OR_NULL(data)) {
+        retval = PTR_ERR(data);
+        dev_err(&pdev->dev, "driver create failed. return=%d.\n", retval);
+        retval = (retval == 0) ? -EINVAL : retval;
+        goto failed;
+    }
+
+    platform_set_drvdata(pdev, data);
+
+    if (info_enable) {
+        fclk_device_info(data, pdev);
+    }
 
     dev_info(&pdev->dev, "driver installed.\n");
-    dev_info(&pdev->dev, "driver version : %s\n" , DRIVER_VERSION);
-    dev_info(&pdev->dev, "device name    : %s\n" , device_name);
-    dev_info(&pdev->dev, "clock  name    : %s\n" , __clk_get_name(this->clk));
-    if (!IS_ERR_OR_NULL(resource_clk)) {
-        dev_info(&pdev->dev, "resource clock : %s\n", __clk_get_name(resource_clk));
-        clk_put(resource_clk);
-    }
-    dev_info(&pdev->dev, "clock  rate    : %lu\n", clk_get_rate(this->clk));
-    dev_info(&pdev->dev, "clock  enabled : %d\n" , __clk_is_enabled(this->clk));
-    if (this->remove.rate_valid == true)
-        dev_info(&pdev->dev, "remove rate    : %lu\n", this->remove.rate);
-    if (this->remove.enable_valid == true)
-        dev_info(&pdev->dev, "remove enable  : %d\n" , this->remove.enable);
-           
-    dev_set_drvdata(&pdev->dev, this);
     return 0;
 
  failed:
-    if (!IS_ERR_OR_NULL(resource_clk)) {
-        clk_put(resource_clk);
-    }
-    if (this != NULL) {
-        if (this->clk          ) {
-            clk_put(this->clk);
-            this->clk = NULL;
-        }
-        if (this->device       ){
-            device_destroy(fclkcfg_sys_class, this->device_number);
-            this->device = NULL;
-        }
-        if (this->device_number){
-            ida_simple_remove(&fclk_device_ida, MINOR(this->device_number));
-            this->device_number = 0;
-        }
-        kfree(this);
-    }
     dev_info(&pdev->dev, "driver install failed.\n");
     return retval;
 }
@@ -499,22 +671,13 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
 
     if (!this)
         return -ENODEV;
-    if (this->clk          ) {
+
+    if (this->clk) 
         __fclk_change_state(this, &this->remove);
-        clk_put(this->clk);
-        this->clk = NULL;
-    }
-    if (this->device       ){
-        device_destroy(fclkcfg_sys_class, this->device_number);
-        this->device = NULL;
-    }
-    if (this->device_number){
-        ida_simple_remove(&fclk_device_ida, MINOR(this->device_number));
-        this->device_number = 0;
-    }
-    kfree(this);
-    dev_set_drvdata(&pdev->dev, NULL);
-    dev_info(&pdev->dev, "driver unloaded\n");
+
+    fclk_device_destroy(this);
+    platform_set_drvdata(pdev, NULL);
+    dev_info(&pdev->dev, "driver removed.\n");
     return 0;
 }
 
@@ -540,6 +703,14 @@ static struct platform_driver fclkcfg_platform_driver = {
     },
 };
 static bool fclkcfg_platform_driver_done = 0;
+
+/**
+ * DOC: fclkcfg kernel module operations
+ *
+ * * fclkcfg_module_cleanup()
+ * * fclkcfg_module_init()
+ * * fclkcfg_module_exit()
+ */
 
 /**
  * fclkcfg_module_cleanup()
@@ -601,6 +772,3 @@ static int __init fclkcfg_module_init(void)
 module_init(fclkcfg_module_init);
 module_exit(fclkcfg_module_exit);
 
-MODULE_AUTHOR("ikwzm");
-MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
-MODULE_LICENSE("Dual BSD/GPL");
