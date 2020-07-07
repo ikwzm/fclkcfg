@@ -46,7 +46,7 @@
 #include <linux/version.h>
 
 #define DRIVER_NAME        "fclkcfg"
-#define DRIVER_VERSION     "1.4.0"
+#define DRIVER_VERSION     "1.4.1-rc.1"
 #define DEVICE_MAX_NUM      32
 
 #if     (LINUX_VERSION_CODE >= 0x030B00)
@@ -293,6 +293,7 @@ static struct attribute *fclkcfg_attrs[] = {
   &(fclkcfg_device_attrs[0].attr),
   &(fclkcfg_device_attrs[1].attr),
   &(fclkcfg_device_attrs[2].attr),
+  &(fclkcfg_device_attrs[3].attr),
   NULL
 };
 static struct attribute_group  fclkcfg_attr_group = {
