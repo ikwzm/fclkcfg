@@ -381,6 +381,7 @@ static struct attribute *fclkcfg_attrs[] = {
   &(fclkcfg_device_attrs[0].attr),
   &(fclkcfg_device_attrs[1].attr),
   &(fclkcfg_device_attrs[2].attr),
+  &(fclkcfg_device_attrs[3].attr),
   NULL
 };
 static struct attribute_group  fclkcfg_attr_group = {
