@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "2.0.0-rc2"
+#define DRIVER_VERSION     "2.0.0-rc3"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -392,7 +392,7 @@ static ssize_t fclk_set_round_rate(struct device *dev, struct device_attribute *
     return size;
 }
 
-#if (USE_DEV_GROUPS == 1)
+#if (USE_FCLK_BRIDGE == 1)
 /**
  * fclk_show_start_rate()
  */
