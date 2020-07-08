@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "2.0.0-rc1"
+#define DRIVER_VERSION     "2.0.0-rc2"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -74,6 +74,7 @@ MODULE_LICENSE("Dual BSD/GPL");
  *
  * * fclkcfg_sys_class  - fclkcfg system class.
  * * init_enable        - fclkcfg install/uninstall infomation enable.
+ * * debug_print        - fclkcfg debug print enable.
  */
 
 /**
@@ -87,6 +88,18 @@ static struct class*  fclkcfg_sys_class = NULL;
 static int            info_enable = 1;
 module_param(         info_enable , int, S_IRUGO);
 MODULE_PARM_DESC(     info_enable , DRIVER_NAME " install/uninstall infomation enable");
+
+/**
+ * debug_print        - fclkcfg debug print enable.
+ */
+static int            debug_print = 0;
+module_param(         debug_print , int, S_IRUGO);
+MODULE_PARM_DESC(     debug_print , DRIVER_NAME " debug print enable");
+
+#define DEV_DBG(dev, fmt, ...) {\
+    if (debug_print){dev_info(dev, fmt, ##__VA_ARGS__);} \
+    else            {dev_dbg (dev, fmt, ##__VA_ARGS__);} \
+}
 
 /**
  * DOC: fclk state structure
@@ -118,7 +131,7 @@ struct fclk_state {
  */
 static void of_get_fclk_state(struct device* dev, const char* rate_name, const char* enable_name, struct fclk_state* state)
 {
-    dev_dbg(dev, "get %s start.\n", rate_name);
+    DEV_DBG(dev, "get %s start.\n", rate_name);
     {
         const char* prop;
 
@@ -135,9 +148,9 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
             }
         }
     }
-    dev_dbg(dev, "get %s done.\n" , rate_name);
+    DEV_DBG(dev, "get %s done.\n" , rate_name);
     
-    dev_dbg(dev, "get %s start.\n", enable_name);
+    DEV_DBG(dev, "get %s start.\n", enable_name);
     {
         int          retval;
         unsigned int enable;
@@ -149,7 +162,7 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
             state->enable       = (enable != 0);
         }
     }
-    dev_dbg(dev, "get %s done.\n", enable_name);
+    DEV_DBG(dev, "get %s done.\n", enable_name);
 }
 
 /**
@@ -204,12 +217,12 @@ static int __fclk_set_enable(struct fclk_device_data* this, bool enable)
             if (status) 
                 dev_err(this->device, "enable failed.");
             else 
-                dev_dbg(this->device, "enable success.");
+                DEV_DBG(this->device, "enable success.");
         }
     } else {
         if (__clk_is_enabled(this->clk) == true) {
             clk_disable_unprepare(this->clk);
-            dev_dbg(this->device, "disable done.");
+            DEV_DBG(this->device, "disable done.");
         }
     }
     return status;
@@ -234,7 +247,7 @@ static int __fclk_set_rate(struct fclk_device_data* this, unsigned long rate)
     if (status)
         dev_err(this->device, "set_rate(%lu=>%lu) failed." , rate, round_rate);
     else
-        dev_dbg(this->device, "set_rate(%lu=>%lu) success.", rate, round_rate);
+        DEV_DBG(this->device, "set_rate(%lu=>%lu) success.", rate, round_rate);
 
     return status;
 }
@@ -572,7 +585,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev, bool brid
     struct fclk_device_data* this   = NULL;
     const char*              device_name;
 
-    dev_dbg(dev, "driver probe start.\n");
+    DEV_DBG(dev, "driver probe start.\n");
     /*
      * create (fclk_device_data*) this.
      */
@@ -590,7 +603,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev, bool brid
     /*
      * get device number
      */
-    dev_dbg(dev, "get device_number start.\n");
+    DEV_DBG(dev, "get device_number start.\n");
     {
         int minor_number = ida_simple_get(&fclk_device_ida, 0, DEVICE_MAX_NUM, GFP_KERNEL);
         if (minor_number < 0) {
@@ -600,12 +613,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev, bool brid
         }
         this->device_number = MKDEV(MAJOR(fclk_device_number), minor_number);
     }
-    dev_dbg(dev, "get device_number done.\n");
+    DEV_DBG(dev, "get device_number done.\n");
 
     /*
      * get clk
      */
-    dev_dbg(dev, "of_clk_get(0) start.\n");
+    DEV_DBG(dev, "of_clk_get(0) start.\n");
     {
         this->clk = of_clk_get(dev->of_node, 0);
         if (IS_ERR_OR_NULL(this->clk)) {
@@ -615,12 +628,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev, bool brid
             goto failed;
         }
     }    
-    dev_dbg(dev, "of_clk_get(0) done.\n");
+    DEV_DBG(dev, "of_clk_get(0) done.\n");
 
     /*
      * get device name
      */
-    dev_dbg(dev, "get device name start.\n");
+    DEV_DBG(dev, "get device name start.\n");
     {
         device_name = of_get_property(dev->of_node, "device-name", NULL);
         
@@ -628,12 +641,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev, bool brid
             device_name = dev_name(dev);
         }
     }
-    dev_dbg(dev, "get device name done.\n");
+    DEV_DBG(dev, "get device name done.\n");
 
     /*
      * create device
      */
-    dev_dbg(dev, "device_create start.\n");
+    DEV_DBG(dev, "device_create start.\n");
     {
         this->device = device_create(fclkcfg_sys_class,
                                      NULL,
@@ -646,12 +659,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev, bool brid
             goto failed;
         }
     }
-    dev_dbg(dev, "device_create done\n");
+    DEV_DBG(dev, "device_create done\n");
 
     /*
      * get resource clock
      */
-    dev_dbg(dev, "of_clk_get(1) start.\n");
+    DEV_DBG(dev, "of_clk_get(1) start.\n");
     {
         this->resource_clk = of_clk_get(dev->of_node, 1);
         if (IS_ERR_OR_NULL(this->resource_clk)) {
@@ -678,7 +691,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev, bool brid
             }
         }
     }
-    dev_dbg(dev, "of_clk_get(1) done.\n");
+    DEV_DBG(dev, "of_clk_get(1) done.\n");
     /*
      * get insert state
      */
@@ -829,7 +842,7 @@ static int fclkbridge_enable_set(struct fpga_bridge *bridge, bool enable)
     struct fclk_state        next_state;
     int                      retval;
 
-    dev_dbg(this->device, "%s(%d)\n", __func__, enable);
+    DEV_DBG(this->device, "%s(%d)\n", __func__, enable);
     
     if (enable == true) {
         next_state.rate         = this->start.rate;
