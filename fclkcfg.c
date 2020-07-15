@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.5.0"
+#define DRIVER_VERSION     "1.6.0-rc.1"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -687,6 +687,7 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
  */
 static struct of_device_id fclkcfg_of_match[] = {
     { .compatible = "ikwzm,fclkcfg-0.10.a", },
+    { .compatible = "ikwzm,fclkcfg", },
     { /* end of table */}
 };
 MODULE_DEVICE_TABLE(of, fclkcfg_of_match);
