@@ -53,11 +53,11 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.6.0-rc.1"
+#define DRIVER_VERSION     "1.6.0-rc.2"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
-#if     (LINUX_VERSION_CODE >= 0x030B00)
+#if     (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
 #define USE_DEV_GROUPS      1
 #else
 #define USE_DEV_GROUPS      0
@@ -67,7 +67,8 @@ MODULE_LICENSE("Dual BSD/GPL");
  * DOC: fclkcfg static variables
  *
  * * fclkcfg_sys_class  - fclkcfg system class.
- * * init_enable        - fclkcfg install/uninstall infomation enable.
+ * * info_enable        - fclkcfg install/uninstall infomation enable.
+ * * debug_print        - fclkcfg debug print enable.
  */
 
 /**
@@ -81,6 +82,18 @@ static struct class*  fclkcfg_sys_class = NULL;
 static int            info_enable = 1;
 module_param(         info_enable , int, S_IRUGO);
 MODULE_PARM_DESC(     info_enable , DRIVER_NAME " install/uninstall infomation enable");
+
+/**
+ * debug_print        - fclkcfg debug print enable.
+ */
+static int            debug_print = 0;
+module_param(         debug_print , int, S_IRUGO);
+MODULE_PARM_DESC(     debug_print , DRIVER_NAME " debug print enable");
+
+#define DEV_DBG(dev, fmt, ...) {\
+    if (debug_print){dev_info(dev, fmt, ##__VA_ARGS__);} \
+    else            {dev_dbg (dev, fmt, ##__VA_ARGS__);} \
+}
 
 /**
  * DOC: fclk state structure
@@ -112,7 +125,7 @@ struct fclk_state {
  */
 static void of_get_fclk_state(struct device* dev, const char* rate_name, const char* enable_name, struct fclk_state* state)
 {
-    dev_dbg(dev, "get %s start.\n", rate_name);
+    DEV_DBG(dev, "get %s start.\n", rate_name);
     {
         const char* prop;
 
@@ -129,9 +142,9 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
             }
         }
     }
-    dev_dbg(dev, "get %s done.\n" , rate_name);
+    DEV_DBG(dev, "get %s done.\n" , rate_name);
     
-    dev_dbg(dev, "get %s start.\n", enable_name);
+    DEV_DBG(dev, "get %s start.\n", enable_name);
     {
         int          retval;
         unsigned int enable;
@@ -143,7 +156,7 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
             state->enable       = (enable != 0);
         }
     }
-    dev_dbg(dev, "get %s done.\n", enable_name);
+    DEV_DBG(dev, "get %s done.\n", enable_name);
 }
 
 /**
@@ -193,12 +206,12 @@ static int __fclk_set_enable(struct fclk_device_data* this, bool enable)
             if (status) 
                 dev_err(this->device, "enable failed.");
             else 
-                dev_dbg(this->device, "enable success.");
+                DEV_DBG(this->device, "enable success.");
         }
     } else {
         if (__clk_is_enabled(this->clk) == true) {
             clk_disable_unprepare(this->clk);
-            dev_dbg(this->device, "disable done.");
+            DEV_DBG(this->device, "disable done.");
         }
     }
     return status;
@@ -223,7 +236,7 @@ static int __fclk_set_rate(struct fclk_device_data* this, unsigned long rate)
     if (status)
         dev_err(this->device, "set_rate(%lu=>%lu) failed." , rate, round_rate);
     else
-        dev_dbg(this->device, "set_rate(%lu=>%lu) success.", rate, round_rate);
+        DEV_DBG(this->device, "set_rate(%lu=>%lu) success.", rate, round_rate);
 
     return status;
 }
@@ -295,16 +308,16 @@ static ssize_t fclk_show_enable(struct device *dev, struct device_attribute *att
  */
 static ssize_t fclk_set_enable(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-    ssize_t       get_status = 0;
-    int           set_status = 0;
-    unsigned long enable;
+    ssize_t                  get_result;
+    int                      set_result;
+    unsigned long            enable;
     struct fclk_device_data* this = dev_get_drvdata(dev);
 
-    if (0 != (get_status = kstrtoul(buf, 0, &enable)))
-        return get_status;
+    if (0 != (get_result = kstrtoul(buf, 0, &enable)))
+        return get_result;
 
-    if (0 != (set_status = __fclk_set_enable(this, (enable != 0))))
-        return (ssize_t)set_status;
+    if (0 != (set_result = __fclk_set_enable(this, (enable != 0))))
+        return (ssize_t)set_result;
 
     return size;
 }
@@ -358,12 +371,12 @@ static ssize_t fclk_show_round_rate(struct device *dev, struct device_attribute 
  */
 static ssize_t fclk_set_round_rate(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-    ssize_t       status;
-    unsigned long round_rate;
+    ssize_t                  get_result;
+    unsigned long            round_rate;
     struct fclk_device_data* this = dev_get_drvdata(dev);
 
-    if (0 != (status = kstrtoul(buf, 0, &round_rate)))
-        return status;
+    if (0 != (get_result = kstrtoul(buf, 0, &round_rate)))
+        return get_result;
     this->round_rate = round_rate;
     return size;
 }
@@ -480,7 +493,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
     struct fclk_device_data* this   = NULL;
     const char*              device_name;
 
-    dev_dbg(dev, "driver probe start.\n");
+    DEV_DBG(dev, "driver probe start.\n");
     /*
      * create (fclk_device_data*) this.
      */
@@ -498,7 +511,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
     /*
      * get device number
      */
-    dev_dbg(dev, "get device_number start.\n");
+    DEV_DBG(dev, "get device_number start.\n");
     {
         int minor_number = ida_simple_get(&fclk_device_ida, 0, DEVICE_MAX_NUM, GFP_KERNEL);
         if (minor_number < 0) {
@@ -508,12 +521,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
         }
         this->device_number = MKDEV(MAJOR(fclk_device_number), minor_number);
     }
-    dev_dbg(dev, "get device_number done.\n");
+    DEV_DBG(dev, "get device_number done.\n");
 
     /*
      * get clk
      */
-    dev_dbg(dev, "of_clk_get(0) start.\n");
+    DEV_DBG(dev, "of_clk_get(0) start.\n");
     {
         this->clk = of_clk_get(dev->of_node, 0);
         if (IS_ERR_OR_NULL(this->clk)) {
@@ -523,12 +536,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
             goto failed;
         }
     }    
-    dev_dbg(dev, "of_clk_get(0) done.\n");
+    DEV_DBG(dev, "of_clk_get(0) done.\n");
 
     /*
      * get device name
      */
-    dev_dbg(dev, "get device name start.\n");
+    DEV_DBG(dev, "get device name start.\n");
     {
         device_name = of_get_property(dev->of_node, "device-name", NULL);
         
@@ -536,12 +549,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
             device_name = dev_name(dev);
         }
     }
-    dev_dbg(dev, "get device name done.\n");
+    DEV_DBG(dev, "get device name done.\n");
 
     /*
      * create device
      */
-    dev_dbg(dev, "device_create start.\n");
+    DEV_DBG(dev, "device_create start.\n");
     {
         this->device = device_create(fclkcfg_sys_class,
                                      NULL,
@@ -554,12 +567,12 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
             goto failed;
         }
     }
-    dev_dbg(dev, "device_create done\n");
+    DEV_DBG(dev, "device_create done\n");
 
     /*
      * get resource clock
      */
-    dev_dbg(dev, "of_clk_get(1) start.\n");
+    DEV_DBG(dev, "of_clk_get(1) start.\n");
     {
         this->resource_clk = of_clk_get(dev->of_node, 1);
         if (IS_ERR_OR_NULL(this->resource_clk)) {
@@ -586,7 +599,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
             }
         }
     }
-    dev_dbg(dev, "of_clk_get(1) done.\n");
+    DEV_DBG(dev, "of_clk_get(1) done.\n");
     /*
      * get insert state
      */
@@ -621,6 +634,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
  * * fclkcfg_platform_driver_remove()  - Remove call for the device.
  * * fclkcfg_of_match                  - Open Firmware Device Identifier Matching Table.
  * * fclkcfg_platform_driver           - Platform Driver Structure.
+ * * fclkcfg_platform_driver_done
  */
 
 /**
@@ -687,7 +701,7 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
  */
 static struct of_device_id fclkcfg_of_match[] = {
     { .compatible = "ikwzm,fclkcfg-0.10.a", },
-    { .compatible = "ikwzm,fclkcfg", },
+    { .compatible = "ikwzm,fclkcfg"       , },
     { /* end of table */}
 };
 MODULE_DEVICE_TABLE(of, fclkcfg_of_match);
