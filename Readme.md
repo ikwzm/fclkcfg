@@ -69,7 +69,7 @@ The following is an example device tree overlay source `dts` that configures `cl
 
 ```devicetree:devicetree.dts
         fclk0 {
-            compatible    = "ikwzm,fclkcfg-0.10.a";
+            compatible    = "ikwzm,fclkcfg";
             device-name   = "fpga-clk0";
             clocks        = <&clkc 15>, <&clkc 2>;
             insert-rate   = "100000000";
@@ -86,7 +86,7 @@ The subsections below describe details of the properties configurable in the dev
 
 The `compatible` property specifies a keyword which is used to find an appropriate device driver
 among available kernel module. For `fclkcfg`, this field is mandatory and shall contain
-`"ikwzm,fclkcfg-0.10.a"`.
+`"ikwzm,fclkcfg"` or `"ikwzm,fclkcfg"`.
 
 ## `device-name` property
 
@@ -98,8 +98,8 @@ among available kernel module. For `fclkcfg`, this field is mandatory and shall 
 ## `clocks` property
 
 The `clock` property takes a target clock to be configured as a first argument, and
-its resource clock as a second argument (optional). The `clock` property is a mandatory field in the
-`fclkcfg` device tree overlay entry.
+its resource clocks as a second and subsequent arguments (optional).
+The `clock` property is a mandatory field in the `fclkcfg` device tree overlay entry.
 
 Clocks passed to the `clocks` property should be in the format of `<clock_handle clock_index>`, e.g. `<&clkc 15>`.
 
@@ -142,13 +142,13 @@ When the above device tree is loaded, clock configuration should be done via `sl
 `clocks = <&clkc 15>;`, in this case, corresponds to the 15th entry (note the number is zero-indexed) of the clock list,
 namely `fclk0` or equivalently PL Clock 0.
 
-The second argument of `clocks` specifies a resource clock of the PL clock to be generated.
+The second and subsequent arguments of `clocks` specifies a resource clock of the PL clock to be generated.
 Either of "armpll" (`<&clkc 0>`), "ddrpll" (`<&clkc 1>`), or "iopll" (`<&clkc 2>`}) can be a resource clock.
 For example, `clocks = <&clkc 16>, <&clkc 2>;` means that `clkc`'s 16th clock (again, note zero-indexed),
 namely `fclk1` (i.e. PL Clock 1) is specified as the target of generation, based on the 2nd entry of the
 `clkc`'s clock list, namely i.e. "iopll".
 
-When the second argument is unspecified, a resource clock that is selected up on Linux boot up is used as a resource clock.
+When the second and subsequent arguments is unspecified, a resource clock that is selected up on Linux boot up is used as a resource clock.
 
 The "phandle" integer number, which is assigned when a decive tree source is compiled to device tree blob by dtc (Device Tree Compiler), can also be used in place of the symbol representation like `&clkc`. For instance, if `clkc` is assigned a phandle number of 5 by dtc, `clocks = <5 15>` has the same meaning as `clocks = <&clkc 15>`, and can be used to control PL Clock 0.
 
@@ -162,7 +162,7 @@ Sometimes symbol definitions can be removed from a compiled device tree blob, an
         target-path = "/amba";
         __overlay__ {
             fclk0 {
-                compatible  = "ikwzm,fclkcfg-0.10.a";
+                compatible  = "ikwzm,fclkcfg";
                 clocks      = <5 15>;
             };
         };
@@ -216,7 +216,6 @@ Table.3 ZynqMP clocks(linux-xlnx v2019.1)
 | pl2_ref     | 73     | <&zynqmp_clk 73> | PL Clock 2. |
 | pl3_ref     | 74     | <&zynqmp_clk 74> | PL Clock 3. |
 
-
 ## `insert-rate` property
 
 The `insert-rate` property specifies a frequency of the clock that is generated when the clock device is installed.
@@ -230,7 +229,7 @@ setting a clock frequency with 100 MHz to PL Clock 0 (on Zybo).
         target-path = "/amba";
         __overlay__ {
             fclk0 {
-                compatible  = "ikwzm,fclkcfg-0.10.a";
+                compatible  = "ikwzm,fclkcfg";
                 clocks      = <&clkc 15>;
                 insert-rate = "100000000";
             };
@@ -254,7 +253,7 @@ The following example enables clock output up on installation of the clock devic
         target-path = "/amba";
         __overlay__ {
             fclk0 {
-                compatible    = "ikwzm,fclkcfg-0.10.a";
+                compatible    = "ikwzm,fclkcfg";
                 clocks        = <&clkc 15>;
                 insert-enable = <1>;
             };
@@ -264,6 +263,26 @@ The following example enables clock output up on installation of the clock devic
 ```
 
 The `insert-enable` property is optional, and when omitted, the clock output is disabled up on installation.
+
+## `insert-resource` property
+
+The `insert-resource` property specifies a resource clock that is generated when the clock device is installed.
+The `insert-resource` property only has an effect if the `clocks` property has second and subsequent arguments.
+The `insert-resource` property is an integer. The position of the second argment of the `clocks` property is `<0>`, and thereafter, the the third argment is `<1>`, and the fourth argment is `<2>`.
+
+For example, in the device tree below, the resource clock is set to `<&clk 1>`.
+
+```devicetree:fclk0-zynq-zybo.dts
+        fclk0 {
+            compatible      = "ikwzm,fclkcfg";
+            device-name     = "fpga-clk0";
+            clocks          = <&clkc 15>, <&clkc 0>, <&clkc 1>, <&clkc 2>;
+            insert-resource = <1>;  // <0>: <&clkc 0>, <1>: <&clkc 1>, <2>: <&clkc 2>,
+            insert-rate     = "25000000";
+        };
+```
+
+The `insert-resouce` property is optional and defaults to `<0>`. In this case, if the `clocks` property has more than the second argument, the clock specified by the second argument will be set as the resource clock. Also, if the `clocks` property has only the first argument, the resource clock will not be changed.
 
 ## `remove-rate` property
 
@@ -278,7 +297,7 @@ setting a clock frequency with 1 MHz to PL Clock 0 (on Zybo) up on removal.
         target-path = "/amba";
         __overlay__ {
             fclk0 {
-                compatible    = "ikwzm,fclkcfg-0.10.a";
+                compatible    = "ikwzm,fclkcfg";
                 clocks        = <&clkc 15>;
                 remove-rate   = "1000000";
             };
@@ -303,7 +322,7 @@ The following example stops clock output up on removal of the clock device.
         target-path = "/amba";
         __overlay__ {
             fclk0 {
-                compatible    = "ikwzm,fclkcfg-0.10.a";
+                compatible    = "ikwzm,fclkcfg";
                 clocks        = <&clkc 15>;
                 remove-enable = <0>;
             };
@@ -316,6 +335,26 @@ The `remove-enable` property is optional, and when omitted, the clock output wil
 removal of the clock device.
 
 
+## `remove-resource` property
+
+The `remove-resource` property specifies a resource clock when the clock device is removed.
+The `remove-resource` property only has an effect if the `clocks` property has second and subsequent arguments.
+The `remove-resource` property is an integer. The position of the second argment of the `clocks` property is `<0>`, and thereafter, the the third argment is `<1>`, and the fourth argment is `<2>`.
+
+For example, in the device tree below, the resource clock is set to `<&clk 1>`.
+
+```devicetree:fclk0-zynq-zybo.dts
+        fclk0 {
+            compatible      = "ikwzm,fclkcfg";
+            device-name     = "fpga-clk0";
+            clocks          = <&clkc 15>, <&clkc 0>, <&clkc 1>, <&clkc 2>;
+            remove-resource = <1>;  // <0>: <&clkc 0>, <1>: <&clkc 1>, <2>: <&clkc 2>,
+            remove-rate     = "25000000";
+        };
+```
+
+The `remove-resouce` property is optional, and when omitted, the resource clock is unchanged when the clock device is removed.
+
 # Device files
 
 When `fclkcfg` is installed and a device tree entry is loaded (via e.g. device tree overlay), the following device
@@ -324,6 +363,8 @@ files will be created. `\<device-name\>` reads the device name specified in the 
   *  `/sys/class/fclkcfg/\<device-name\>/enable`
   *  `/sys/class/fclkcfg/\<device-name\>/rate`
   *  `/sys/class/fclkcfg/\<device-name\>/round_rate`
+  *  `/sys/class/fclkcfg/\<device-name\>/resource`
+  *  `/sys/class/fclkcfg/\<device-name\>/resource_clks`
 
 ## /sys/class/fclkcfg/\<device-name\>/enable
 
@@ -371,6 +412,25 @@ zynq# cat /sys/class/fclkcfg/fclk0/round_rate
 zynq# echo  75000000 > /sys/class/fclkcfg/fclk0/round_rate
 zynq# cat /sys/class/fclkcfg/fclk0/round_rate
 75000000 => 71428572
+```
+
+## /sys/class/fclkcfg/\<device-name\>/resource
+
+This file is used to change the resource clock. The following example the resource clock is changed to 1.
+
+```console
+zynq# echo 1 > /sys/class/fclkcfg/fclk0/resource
+zynq# cat /sys/class/fclkcfg/fclk0/resource
+1
+```
+
+## /sys/class/fclkcfg/\<device-name\>/resource_clks
+
+By reading this file, you can get the names of the resource clocks that you can select.
+
+```console
+zynq# cat /sys/class/fclkcfg/fclk0/resource_clks
+armpll, ddrpll, iopll
 ```
 
 # Reference

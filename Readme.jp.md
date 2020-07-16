@@ -88,7 +88,7 @@ fclkcfg はデバイスツリーでクロックの設定をします。具体的
 
 ```devicetree:devicetree.dts
 		fclk0 {
-			compatible    = "ikwzm,fclkcfg-0.10.a";
+			compatible    = "ikwzm,fclkcfg";
 			device-name   = "fpga-clk0";
 			clocks        = <&clkc 15>, <&clkc 2>;
 			insert-rate   = "100000000";
@@ -108,7 +108,7 @@ fclkcfg はデバイスツリーでクロックの設定をします。具体的
 ## compatible プロパティ
 
 
-compatible プロパティはカーネルモジュールの中から対応するデバイスドライバを探すためのキーワードを示します。fclkcfg では "ikwzm,fclkcfg-0.10.a" を指定します。compatible プロパティは必須です。
+compatible プロパティはカーネルモジュールの中から対応するデバイスドライバを探すためのキーワードを示します。fclkcfg では "ikwzm,fclkcfg-0.10.a" または "ikwzm,fclkcfg" を指定します。compatible プロパティは必須です。
 
 
 
@@ -124,9 +124,9 @@ device-name プロパティはデバイス名を文字列で指定します。de
 
 clocks プロパティの第一引数で制御する PL のクロックを指定します。
 
-clocks プロパティの第二引数で PL の リソースのクロックを指定します。
+clocks プロパティの第二引数以降で PL の リソースのクロックを指定します。
 
-clocks プロパティは必須です。ただし第一引数は必須ですが第二引数はオプションです。
+clocks プロパティは必須です。ただし第一引数は必須ですが第二引数以降はオプションです。
 
 clocks プロパティで指定するクロックは、<クロックのハンドル クロックのインデックス> で指定します。例えば Zynq の場合、次のようにデバイスツリーでクロックが指定されています。
 
@@ -176,7 +176,7 @@ clocks = <&clkc 15>; と記述することにより、  clkc が管理してい�
 
 
 
-clocks の第二引数で PL の リソースのクロックを指定しています。PL のクロックは、リソースのクロックを分周することにより必要な周波数のクロックを出力しています。clocks の第二引数で、PL のリソースのクロックを "armpll"、"ddrpll"、 "iopll" の何れかから選択することができます。"armpll" は <&clkc 0>、"ddrpll" は <&clkc 1>、"iopll" は <&clkc 2> です。
+clocks の第二引数以降で PL の リソースのクロックを指定しています。PL のクロックは、リソースのクロックを分周することにより必要な周波数のクロックを出力しています。clocks の第二引数以降で、PL のリソースのクロックを "armpll"、"ddrpll"、 "iopll" の何れかから選択することができます。"armpll" は <&clkc 0>、"ddrpll" は <&clkc 1>、"iopll" は <&clkc 2> です。
 
 clocks = <&clkc 16>, <&clkc 2>; と記述することにより、clkc が管理している16番目のクロック(これが PL Clock 1を指す)を制御することを指定し、かつ clkc の管理している2番目のクロック(これが "iopll" を指す)をリソースクロックとして選択することを指定します。
 
@@ -197,7 +197,7 @@ Linux を起動する時に読み込むデバイスツリーがシンボル情�
 		target-path = "/amba";
 		__overlay__ {
 			fclk0 {
-				compatible  = "ikwzm,fclkcfg-0.10.a";
+				compatible  = "ikwzm,fclkcfg";
 				clocks      = <5 15>;
 			};
 		};
@@ -266,7 +266,7 @@ insert-rate プロパティは、このデバイスがインストールされ�
 		target-path = "/amba";
 		__overlay__ {
 			fclk0 {
-				compatible  = "ikwzm,fclkcfg-0.10.a";
+				compatible  = "ikwzm,fclkcfg";
 				clocks      = <&clkc 15>;
 				insert-rate = "100000000";
 			};
@@ -297,7 +297,7 @@ insert-enable プロパティは、このデバイスがインストールされ
 		target-path = "/amba";
 		__overlay__ {
 			fclk0 {
-				compatible    = "ikwzm,fclkcfg-0.10.a";
+				compatible    = "ikwzm,fclkcfg";
 				clocks        = <&clkc 15>;
 				insert-enable = <1>;
 			};
@@ -315,6 +315,42 @@ insert-enable プロパティはオプションです。insert-enable プロパ�
 
 
 
+## insert-resource プロパティ
+
+
+insert-resource プロパティは、このデバイスがインストールされた時に設定されるリソースクロックを指定します。insert-resource プロパティは clocks プロパティに第二引数以降がある場合にのみ効果があります。clocks プロパティが第一引数のみがある場合、リソースクロックは変更されません。
+
+insert-resource プロパティは整数です。 clocks プロパティの2番目の引数のクロックを指定する時は <0> を、３番目の引数のクロックを指定する場合は <1> を、4番目の引数のクロックを指定する場合は <2> を指定します。
+
+
+
+例えば次のようにデバイスツリーに記述することで、インストール時にリソースクロックを <&clk 1> に設定します。
+
+
+```devicetree:fclk0-zynq-zybo.dts
+/dts-v1/;/plugin/;
+/ {
+	fragment@0 {
+		target-path = "/amba";
+		__overlay__ {
+			fclk0 {
+				compatible    = "ikwzm,fclkcfg";
+				clocks        = <&clkc 15>, <&clkc 0>, <&clkc 1>, <&clkc 2>;
+				insert-resource = <1>;  // <0>: <&clkc 0>, <1>: <&clkc 1>, <2>: <&clkc 2>,
+				insert-rate =  "100000000";
+			};
+		};
+	};
+};
+
+```
+
+
+
+
+insert-resouce プロパティはオプションで、デフォルトは <0> です。この場合、 clocksプロパティが2番目の引数を超える場合、2番目の引数で指定されたクロックがリソースクロックとして設定されます。
+
+
 ## remove-rate プロパティ
 
 
@@ -328,7 +364,7 @@ remove-rate プロパティは、このデバイスがリムーブされた時�
 		target-path = "/amba";
 		__overlay__ {
 			fclk0 {
-				compatible    = "ikwzm,fclkcfg-0.10.a";
+				compatible    = "ikwzm,fclkcfg";
 				clocks        = <&clkc 15>;
 				remove-rate   = "1000000";
 			};
@@ -359,7 +395,7 @@ remove-enable プロパティは、このデバイスがリムーブされた時
 		target-path = "/amba";
 		__overlay__ {
 			fclk0 {
-				compatible    = "ikwzm,fclkcfg-0.10.a";
+				compatible    = "ikwzm,fclkcfg";
 				clocks        = <&clkc 15>;
 				remove-enable = <0>;
 			};
@@ -376,6 +412,42 @@ remove-enable プロパティはオプションです。remove-enable プロパ�
 
 
 
+## remove-resource プロパティ
+
+
+remove-resource プロパティは、このデバイスがリムーブされた時のリソースクロックを指定します。remove-resource プロパティは clocks プロパティに第二引数以降がある場合にのみ効果があります。clocks プロパティが第一引数のみがある場合、リソースクロックは変更されません。
+
+remove-resource プロパティは整数です。 clocks プロパティの2番目の引数のクロックを指定する時は <0> を、３番目の引数のクロックを指定する場合は <1> を、4番目の引数のクロックを指定する場合は <2> を指定します。
+
+
+
+例えば次のようにデバイスツリーに記述することで、のデバイスがリムーブされた時にリソースクロックを <&clk 1> に設定します。
+
+
+```devicetree:fclk0-zynq-zybo.dts
+/dts-v1/;/plugin/;
+/ {
+	fragment@0 {
+		target-path = "/amba";
+		__overlay__ {
+			fclk0 {
+				compatible    = "ikwzm,fclkcfg";
+				clocks        = <&clkc 15>, <&clkc 0>, <&clkc 1>, <&clkc 2>;
+				remove-resource = <1>;  // <0>: <&clkc 0>, <1>: <&clkc 1>, <2>: <&clkc 2>,
+				remove-rate =  "100000000";
+			};
+		};
+	};
+};
+
+```
+
+
+
+
+remove-resouce プロパティはオプションです。省略された場合、このデバイスがリムーブされてもリソースクロックは変更されません。
+
+
 # デバイスファイル
 
 
@@ -384,6 +456,8 @@ fclkcfg をインストールしてデバイスツリーを追加すると、各
   *  /sys/class/fclkcfg/\<device-name\>/enable
   *  /sys/class/fclkcfg/\<device-name\>/rate
   *  /sys/class/fclkcfg/\<device-name\>/round_rate
+  *  /sys/class/fclkcfg/\<device-name\>/resource
+  *  /sys/class/fclkcfg/\<device-name\>/resource_clks
 
 
 
@@ -452,6 +526,37 @@ zynq# cat /sys/class/fclkcfg/fclk0/round_rate
 ```
 
 
+
+
+
+## /sys/class/fclkcfg/\<device-name\>/resource
+
+
+このファイルはリソースクロックを変更するために使用します。次の例ではリソースクロックを1に変更しています。
+
+
+```console
+zynq# echo 1 > /sys/class/fclkcfg/fclk0/resource
+zynq# cat /sys/class/fclkcfg/fclk0/resource
+1
+
+```
+
+
+
+
+
+## /sys/class/fclkcfg/\<device-name\>/resource_clks
+
+
+このファイルを読むことで、リソースクロックとして指定できるクロックの名前を得ることが出来ます。
+
+
+```console
+zynq# cat /sys/class/fclkcfg/fclk0/resource_clks
+armpll, ddrpll, iopll
+
+```
 
 
 
