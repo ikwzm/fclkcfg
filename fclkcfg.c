@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.6.0-rc.3"
+#define DRIVER_VERSION     "1.6.0"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -354,7 +354,7 @@ static int __fclk_change_state(struct fclk_device_data* this, struct fclk_state*
  * * /sys/class/udmabuf/<device-name>/enable
  * * /sys/class/udmabuf/<device-name>/rate
  * * /sys/class/udmabuf/<device-name>/round_rate
- * * /sys/class/udmabuf/<device-name>/resource_clk
+ * * /sys/class/udmabuf/<device-name>/resource_clks
  * * /sys/class/udmabuf/<device-name>/resource
  * * 
  */
