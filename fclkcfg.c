@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.6.0"
+#define DRIVER_VERSION     "1.6.1-rc.1"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -66,15 +66,9 @@ MODULE_LICENSE("Dual BSD/GPL");
 /**
  * DOC: fclkcfg static variables
  *
- * * fclkcfg_sys_class  - fclkcfg system class.
- * * info_enable        - fclkcfg install/uninstall infomation enable.
- * * debug_print        - fclkcfg debug print enable.
+ * * info_enable      - fclkcfg install/uninstall infomation enable.
+ * * debug_print      - fclkcfg debug print enable.
  */
-
-/**
- * fclkcfg_sys_class  - fclkcfg system class.
- */
-static struct class*  fclkcfg_sys_class = NULL;
 
 /**
  * info_enable        - fclkcfg install/uninstall infomation enable.
@@ -560,14 +554,16 @@ static const struct attribute_group* fclkcfg_attr_groups[] = {
  *
  * This section defines the operation of fclk device data.
  *
- * * fclk_device_number      - fclk device major number.
- * * fclk_device_ida         - fclk device minor number allocator variable.
- * * fclk_device_info()      - Print infomation the fclk device data.
- * * fclk_device_create()    - Create fclk device data.
- * * fclk_device_destroy()   - Destroy the fclk device data.
+ * * fclkcfg_sys_class        - fclkcfg system class.
+ * * fclkcfg_device_number    - fclkcfg device major number.
+ * * fclkcfg_device_ida       - fclkcfg device minor number allocator variable.
+ * * fclk_device_info()       - Print infomation the fclk device data.
+ * * fclkcfg_device_create()  - Create  fclkcfg device.
+ * * fclkcfg_device_destroy() - Destroy fclkcfg device.
  */
-static dev_t          fclk_device_number = 0;
-static DEFINE_IDA(    fclk_device_ida );
+static struct class*  fclkcfg_sys_class = NULL;
+static dev_t          fclkcfg_device_number = 0;
+static DEFINE_IDA(    fclkcfg_device_ida );
 
 /**
  * fclk_device_info() -  Print infomation the fclk device data.
@@ -612,13 +608,13 @@ static void fclk_device_info(struct fclk_device_data* this, struct platform_devi
 }
 
 /**
- * fclk_device_destroy() - Destroy the fclk device data.
+ * fclkcfg_device_destroy() - Destroy the fclk device data.
  *
  * @this:       Pointer to the fclk device data.
  * Return:      Success(=0) or error status(<0).
  *
  */
-static int fclk_device_destroy(struct fclk_device_data* this)
+static int fclkcfg_device_destroy(struct fclk_device_data* this)
 {
     if (!this)
         return -ENODEV;
@@ -643,7 +639,7 @@ static int fclk_device_destroy(struct fclk_device_data* this)
         this->device = NULL;
     }
     if (this->device_number) {
-        ida_simple_remove(&fclk_device_ida, MINOR(this->device_number));
+        ida_simple_remove(&fclkcfg_device_ida, MINOR(this->device_number));
         this->device_number = 0;
     }
     kfree(this);
@@ -675,13 +671,13 @@ static int fclk_device_get_state_property(struct fclk_device_data* this, struct 
 }
 
 /**
- * fclk_device_create() -  Create fclk device data.
+ * fclkcfg_device_create() -  Create fclkcfg device.
  *
  * @dev:        handle to the device structure.
  * Return:      Pointer to the fclk device data or NULL.
  *
  */
-static struct fclk_device_data* fclk_device_create(struct device *dev)
+static struct fclk_device_data* fclkcfg_device_create(struct device *dev)
 {
     int                      retval = 0;
     struct fclk_device_data* this   = NULL;
@@ -707,13 +703,13 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
      */
     DEV_DBG(dev, "get device_number start.\n");
     {
-        int minor_number = ida_simple_get(&fclk_device_ida, 0, DEVICE_MAX_NUM, GFP_KERNEL);
+        int minor_number = ida_simple_get(&fclkcfg_device_ida, 0, DEVICE_MAX_NUM, GFP_KERNEL);
         if (minor_number < 0) {
             dev_err(dev, "invalid or conflict minor number %d.\n", minor_number);
             retval = -ENODEV;
             goto failed;
         }
-        this->device_number = MKDEV(MAJOR(fclk_device_number), minor_number);
+        this->device_number = MKDEV(MAJOR(fclkcfg_device_number), minor_number);
     }
     DEV_DBG(dev, "get device_number done.\n");
 
@@ -837,7 +833,7 @@ static struct fclk_device_data* fclk_device_create(struct device *dev)
     return this;
 
  failed:
-    fclk_device_destroy(this);
+    fclkcfg_device_destroy(this);
     return ERR_PTR(retval);
 }
 
@@ -867,7 +863,7 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     int                      retval = 0;
     struct fclk_device_data* data;
 
-    data = fclk_device_create(&pdev->dev);
+    data = fclkcfg_device_create(&pdev->dev);
     if (IS_ERR_OR_NULL(data)) {
         retval = PTR_ERR(data);
         dev_err(&pdev->dev, "driver create failed. return=%d.\n", retval);
@@ -907,7 +903,7 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
     if (this->clk) 
         __fclk_change_state(this, &this->remove);
 
-    fclk_device_destroy(this);
+    fclkcfg_device_destroy(this);
     platform_set_drvdata(pdev, NULL);
     dev_info(&pdev->dev, "driver removed.\n");
     return 0;
@@ -952,8 +948,8 @@ static void fclkcfg_module_cleanup(void)
 {
     if (fclkcfg_platform_driver_done ){platform_driver_unregister(&fclkcfg_platform_driver);}
     if (fclkcfg_sys_class     != NULL){class_destroy(fclkcfg_sys_class);}
-    if (fclk_device_number    != 0   ){unregister_chrdev_region(fclk_device_number, 0);}
-    ida_destroy(&fclk_device_ida);
+    if (fclkcfg_device_number != 0   ){unregister_chrdev_region(fclkcfg_device_number, 0);}
+    ida_destroy(&fclkcfg_device_ida);
 }
 
 /**
@@ -971,12 +967,12 @@ static int __init fclkcfg_module_init(void)
 {
     int retval = 0;
 
-    ida_init(&fclk_device_ida);
+    ida_init(&fclkcfg_device_ida);
 
-    retval = alloc_chrdev_region(&fclk_device_number, 0, 0, DRIVER_NAME);
+    retval = alloc_chrdev_region(&fclkcfg_device_number, 0, 0, DRIVER_NAME);
     if (retval != 0) {
         printk(KERN_ERR "%s: couldn't allocate device major number\n", DRIVER_NAME);
-        fclk_device_number = 0;
+        fclkcfg_device_number = 0;
         goto failed;
     }
 
