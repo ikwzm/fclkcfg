@@ -365,6 +365,9 @@ files will be created. `\<device-name\>` reads the device name specified in the 
   *  `/sys/class/fclkcfg/\<device-name\>/round_rate`
   *  `/sys/class/fclkcfg/\<device-name\>/resource`
   *  `/sys/class/fclkcfg/\<device-name\>/resource_clks`
+  *  `/sys/class/fclkcfg/\<device-name\>/remove_rate`
+  *  `/sys/class/fclkcfg/\<device-name\>/remove_enable`
+  *  `/sys/class/fclkcfg/\<device-name\>/remove_resource`
 
 ## /sys/class/fclkcfg/\<device-name\>/enable
 
@@ -432,6 +435,37 @@ By reading this file, you can get the names of the resource clocks that you can 
 zynq# cat /sys/class/fclkcfg/fclk0/resource_clks
 armpll, ddrpll, iopll
 ```
+
+## /sys/class/fclkcfg/\<device-name\>/remove_rate
+
+This file is used to change the output clock frequency when the clock device is removed.
+The following example selects an output frequency of 100 MHz when the clock device is removed.
+
+```console
+zynq# echo 100000000 > /sys/class/fclkcfg/fclk0/remove_rate
+zynq# cat /sys/class/fclkcfg/fclk0/remove_rate
+100000000
+```
+
+Writing a negative value to this file will not change the frequency when the clock device is removed.
+
+
+## /sys/class/fclkcfg/\<device-name\>/remove_enable
+
+This file controls the output status of the clock when the clock device is removed.
+
+Writing 1 will output the clock when the clock device is removed.
+Writing 0 will stop the clock when the clock device is removed.
+Writing -1 does not control the clock when the clock device is removed.
+
+
+## /sys/class/fclkcfg/\<device-name\>/remove_resource
+
+The file specifies a resource clock when the clock device is removed.
+The file only has an effect if the `clocks` property has second and subsequent arguments.
+
+Writing a value of 0 or greater changes to the resource clock specified when the clock device was removed.
+Writing a negative value does not change the resource clock when the clock device is removed.
 
 # Reference
 
