@@ -53,9 +53,15 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.7.0"
+#define DRIVER_VERSION     "2.0.0-rc.1"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
+
+#ifdef  CONFIG_FPGA_BRIDGE
+#define USE_FCLK_BRIDGE     1
+#else
+#define USE_FCLK_BRIDGE     0
+#endif
 
 #if     (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
 #define USE_DEV_GROUPS      1
@@ -190,6 +196,11 @@ struct fclk_device_data {
     unsigned long        round_rate;
     struct fclk_state    insert;
     struct fclk_state    remove;
+#if (USE_FCLK_BRIDGE == 1)
+    bool                 bridge;
+    bool                 bridge_enable;
+    struct fclk_state    start;
+#endif
 };
 
 /**
@@ -663,6 +674,24 @@ DEF_FCLK_STATE_SET_ENABLE   (remove);
 DEF_FCLK_STATE_SET_RATE     (remove);
 DEF_FCLK_STATE_SET_RESOURCE (remove);
 
+#if (USE_FCLK_BRIDGE == 1)
+/**
+ * fclk_show_start_enable()
+ * fclk_show_start_rate()
+ * fclk_show_start_resource()
+ * fclk_set_start_enable()
+ * fclk_set_start_rate()
+ * fclk_set_start_resource()
+ */
+DEF_FCLK_STATE_SHOW_ENABLE  (start);
+DEF_FCLK_STATE_SHOW_RATE    (start);
+DEF_FCLK_STATE_SHOW_RESOURCE(start);
+DEF_FCLK_STATE_SET_ENABLE   (start);
+DEF_FCLK_STATE_SET_RATE     (start);
+DEF_FCLK_STATE_SET_RESOURCE (start);
+
+#endif
+
 /**
  * DOC: fclk device data operations
  *
@@ -712,6 +741,17 @@ static void fclk_device_info(struct fclk_device_data* this, struct platform_devi
         if (this->remove.resclk_valid == true)
             RES_INFO(dev, "remove resource: "     , this->remove.resclk);
     }
+#if (USE_FCLK_BRIDGE == 1)
+    if (this->bridge == true) {
+        dev_info(dev, "fpga bridge    : \n");
+        if (this->start.rate_valid   == true)
+            dev_info(dev, " start rate    : %lu\n", this->start.rate  );
+        if (this->start.enable_valid == true)
+            dev_info(dev, " start enable  : %d\n" , this->start.enable);
+        if (this->start.resclk_valid == true)
+            RES_INFO(dev, " start resource: "     , this->start.resclk);
+    }
+#endif
 }
 /**
  * fclk_device_get_state_property() - get rate/enable/resource property from device.
@@ -742,10 +782,11 @@ static int fclk_device_get_state_property(struct fclk_device_data* this, struct 
  *
  * @this:        Pointer to the fclk device data.
  * @dev:         handle to the device structure.
+ * @bridge:      birdge mode
  * Return:       Success(=0) or error status(<0).
  *
  */
-static int fclk_device_setup(struct fclk_device_data* this, struct device *dev)
+static int fclk_device_setup(struct fclk_device_data* this, struct device *dev, bool bridge)
 {
     int retval = 0;
     /*
@@ -833,6 +874,16 @@ static int fclk_device_setup(struct fclk_device_data* this, struct device *dev)
     if (retval)
         goto failed;
 
+#if (USE_FCLK_BRIDGE == 1)
+    this->bridge = bridge;
+    /*
+     * get start state
+     */
+    retval = fclk_device_get_state_property(this, dev, "start-rate" , "start-enable" , "start-resource",  &this->start );
+    if (retval)
+        goto failed;
+#endif
+
     return 0;
 
  failed:
@@ -909,6 +960,7 @@ static ssize_t fclkcfg_set_ ## __attr_name( \
     size_t size)                            \
 {   return fclk_set_ ## __attr_name(dev_get_drvdata(dev), attr, buf, size);}
 
+
 /**
  * fclkcfg_show_driver_version()
  */
@@ -960,6 +1012,28 @@ DEF_FCLKCFG_SET (remove_rate);
 DEF_FCLKCFG_SHOW(remove_resource);
 DEF_FCLKCFG_SET (remove_resource);
 
+#if (USE_FCLK_BRIDGE == 1)
+/**
+ * fclkcfg_show_start_enable()
+ * fclkcfg_set_start_enable()
+ */
+DEF_FCLKCFG_SHOW(start_enable);
+DEF_FCLKCFG_SET (start_enable);
+/**
+ * fclkcfg_show_start_rate()
+ * fclkcfg_set_start_rate()
+ */
+DEF_FCLKCFG_SHOW(start_rate);
+DEF_FCLKCFG_SET (start_rate);
+/**
+ * fclkcfg_show_start_resource()
+ * fclkcfg_set_start_resource()
+ */
+DEF_FCLKCFG_SHOW(start_resource);
+DEF_FCLKCFG_SET (start_resource);
+
+#endif
+
 static struct device_attribute fclkcfg_device_attrs[] = {
   __ATTR(driver_version , 0444, fclkcfg_show_driver_version , NULL                       ),
   __ATTR(enable         , 0664, fclkcfg_show_enable         , fclkcfg_set_enable         ),
@@ -970,6 +1044,11 @@ static struct device_attribute fclkcfg_device_attrs[] = {
   __ATTR(remove_enable  , 0664, fclkcfg_show_remove_enable  , fclkcfg_set_remove_enable  ),
   __ATTR(remove_rate    , 0664, fclkcfg_show_remove_rate    , fclkcfg_set_remove_rate    ),
   __ATTR(remove_resource, 0664, fclkcfg_show_remove_resource, fclkcfg_set_remove_resource),
+#if (USE_FCLK_BRIDGE == 1)
+  __ATTR(start_enable   , 0664, fclkcfg_show_start_enable   , fclkcfg_set_start_enable   ),
+  __ATTR(start_rate     , 0664, fclkcfg_show_start_rate     , fclkcfg_set_start_rate     ),
+  __ATTR(start_resource , 0664, fclkcfg_show_start_resource , fclkcfg_set_start_resource ),
+#endif
   __ATTR_NULL,
 };
 
@@ -984,6 +1063,11 @@ static struct attribute *fclkcfg_attrs[] = {
   &(fclkcfg_device_attrs[ 6].attr),
   &(fclkcfg_device_attrs[ 7].attr),
   &(fclkcfg_device_attrs[ 8].attr),
+#if (USE_FCLK_BRIDGE == 1)
+  &(fclkcfg_device_attrs[ 9].attr),
+  &(fclkcfg_device_attrs[10].attr),
+  &(fclkcfg_device_attrs[11].attr),
+#endif
   NULL
 };
 static struct attribute_group  fclkcfg_attr_group = {
@@ -1032,10 +1116,11 @@ static int fclkcfg_device_destroy(struct fclk_device_data* this)
  * fclkcfg_device_create() -  Create fclkcfg device.
  *
  * @dev:        handle to the device structure.
+ * @bridge:     birdge mode
  * Return:      Pointer to the fclk device data or NULL.
  *
  */
-static struct fclk_device_data* fclkcfg_device_create(struct device *dev)
+static struct fclk_device_data* fclkcfg_device_create(struct device *dev, bool bridge)
 {
     int                      retval = 0;
     struct fclk_device_data* this   = NULL;
@@ -1106,7 +1191,7 @@ static struct fclk_device_data* fclkcfg_device_create(struct device *dev)
      * set up fclk device data
      */
     {
-        retval = fclk_device_setup(this, dev);
+        retval = fclk_device_setup(this, dev, bridge);
         if (retval)
             goto failed;
     }
@@ -1143,9 +1228,10 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     int                      retval = 0;
     struct fclk_device_data* data;
 
-    data = fclkcfg_device_create(&pdev->dev);
+    data = fclkcfg_device_create(&pdev->dev, false);
     if (IS_ERR_OR_NULL(data)) {
         retval = PTR_ERR(data);
+        data   = NULL;
         dev_err(&pdev->dev, "driver create failed. return=%d.\n", retval);
         retval = (retval == 0) ? -EINVAL : retval;
         goto failed;
@@ -1161,6 +1247,8 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
     return 0;
 
  failed:
+    if (data)
+        fclkcfg_device_destroy(data);
     dev_info(&pdev->dev, "driver install failed.\n");
     return retval;
 }
@@ -1213,6 +1301,200 @@ static struct platform_driver fclkcfg_platform_driver = {
 };
 static bool fclkcfg_platform_driver_done = 0;
 
+#if (USE_FCLK_BRIDGE == 1)
+/**
+ * DOC: fclkbridge Platform Driver
+ *
+ * This section defines the fclkcfg platform driver.
+ *
+ * * fclkbridge_enable_set()              - fpga_bridge enable_set  operation.  
+ * * fclkbridge_enable_show()             - fpga_bridge enable_show operation.  
+ * * fclkbridge_ops                       - fpga_bridge operations table.
+ * * fclkbridge_platform_driver_probe()   - Probe call for the device.
+ * * fclkbridge_platform_driver_remove()  - Remove call for the device.
+ * * fclkbridge_of_match                  - Open Firmware Device Identifier Matching Table.
+ * * fclkbridge_platform_driver           - Platform Driver Structure.
+ * * fclkbridge_platform_driver_done
+ */
+#include <linux/fpga/fpga-bridge.h>
+/**
+ * fclkbridge_enable_set() - fpga_bridge enable_set  operation.  
+ */
+static int fclkbridge_enable_set(struct fpga_bridge *bridge, bool enable)
+{
+    struct fclk_device_data* this = bridge->priv;
+    struct fclk_state        next_state;
+    int                      retval;
+
+    DEV_DBG(this->device, "%s(%d) start.\n", __func__, enable);
+    
+    if (enable == true) {
+        next_state.rate         = this->start.rate;
+        next_state.rate_valid   = false;
+        next_state.enable       = this->start.enable;
+        next_state.enable_valid = this->start.enable_valid;
+        next_state.resclk       = 0;
+        next_state.resclk_valid = false;
+    } else if ((this->start.rate_valid == true) || (this->start.resclk_valid == true)) {
+        next_state.rate         = this->start.rate;
+        next_state.rate_valid   = this->start.rate_valid;
+        next_state.enable       = false;
+        next_state.enable_valid = true;
+        next_state.resclk       = this->start.resclk;
+        next_state.resclk_valid = this->start.resclk_valid;
+    } else {
+        next_state.rate         = this->start.rate;
+        next_state.rate_valid   = false;
+        next_state.enable       = false;
+        next_state.enable_valid = false;
+        next_state.resclk       = 0;
+        next_state.resclk_valid = false;
+    }
+
+    retval = __fclk_change_state(this, &next_state);
+
+    if (retval)
+        goto failed;
+
+    this->bridge_enable = enable;
+
+    DEV_DBG(this->device, "%s(%d) success.\n", __func__, enable);
+    return 0;
+
+ failed:
+    DEV_DBG(this->device, "%s(%d) failed(%d).\n", __func__, enable, retval);
+    return retval;
+}
+
+/**
+ * fclkbridge_enable_show() - fpga_bridge enable_show operation.  
+ */
+static int fclkbridge_enable_show(struct fpga_bridge *bridge)
+{
+    struct fclk_device_data* this = bridge->priv;
+    
+    return this->bridge_enable;
+}
+
+/**
+ * fpga_bridge operations table
+ */
+static const struct fpga_bridge_ops fclkbridge_ops = {
+	.enable_set  = fclkbridge_enable_set,
+	.enable_show = fclkbridge_enable_show,
+};
+
+/**
+ * fclkbridge_platform_driver_probe() -  Probe call for the device.
+ *
+ * @pdev:	handle to the platform device structure.
+ * Returns 0 on success, negative error otherwise.
+ *
+ * It does all the memory allocation and registration for the device.
+ */
+static int fclkbridge_platform_driver_probe(struct platform_device *pdev)
+{
+    int                      retval = 0;
+    struct fpga_bridge*      bridge;
+    struct fclk_device_data* data;
+
+    data = fclkcfg_device_create(&pdev->dev, true);
+    if (IS_ERR_OR_NULL(data)) {
+        retval = PTR_ERR(data);
+        data   = NULL;
+        dev_err(&pdev->dev, "driver create failed. return=%d.\n", retval);
+        retval = (retval == 0) ? -EINVAL : retval;
+        goto failed;
+    }
+
+    bridge = devm_fpga_bridge_create(&pdev->dev, dev_name(data->device), &fclkbridge_ops, data);
+    
+    if (IS_ERR_OR_NULL(bridge)) {
+        retval = PTR_ERR(bridge);
+        dev_err(&pdev->dev, "devm_fpga_bridge_create failed. return=%d.\n", retval);
+        retval = (retval == 0) ? -ENOMEM : retval;
+        goto failed;
+    }
+
+    platform_set_drvdata(pdev, bridge);
+
+    retval = fpga_bridge_register(bridge);
+    if (retval) {
+        dev_err(&pdev->dev, "fpga_bridge_register failed. return = %d.\n", retval);
+        goto failed;
+    }
+
+    if (info_enable) {
+        fclk_device_info(data, pdev);
+    }
+
+    dev_info(&pdev->dev, "driver installed.\n");
+    return 0;
+
+ failed:
+    if (data)
+        fclkcfg_device_destroy(data);
+    dev_info(&pdev->dev, "driver install failed.\n");
+    return retval;
+}
+
+/**
+ * fclkbridge_platform_driver_remove() -  Remove call for the device.
+ *
+ * @pdev:	handle to the platform device structure.
+ * Returns 0 or error status.
+ *
+ * Unregister the device after releasing the resources.
+ */
+static int fclkbridge_platform_driver_remove(struct platform_device *pdev)
+{
+    struct fpga_bridge*      bridge = platform_get_drvdata(pdev);
+    struct fclk_device_data* this;
+
+    if (!bridge) 
+        return -ENODEV;
+
+    fpga_bridge_unregister(bridge);
+
+    this = bridge->priv;
+    
+    if (!this)
+        return -ENODEV;
+
+    if (this->clk) 
+        __fclk_change_state(this, &this->remove);
+
+    fclkcfg_device_destroy(this);
+    platform_set_drvdata(pdev, NULL);
+    dev_info(&pdev->dev, "driver removed.\n");
+    return 0;
+}
+
+/**
+ * Open Firmware Device Identifier Matching Table
+ */
+static struct of_device_id fclkbridge_of_match[] = {
+    { .compatible = "ikwzm,fclkbridge", },
+    { /* end of table */}
+};
+MODULE_DEVICE_TABLE(of, fclkbridge_of_match);
+
+/**
+ * Platform Driver Structure
+ */
+static struct platform_driver fclkbridge_platform_driver = {
+    .probe  = fclkbridge_platform_driver_probe,
+    .remove = fclkbridge_platform_driver_remove,
+    .driver = {
+        .owner = THIS_MODULE,
+        .name  = "fclkbridge",
+        .of_match_table = fclkbridge_of_match,
+    },
+};
+static bool fclkbridge_platform_driver_done = 0;
+#endif
+
+
 /**
  * DOC: fclkcfg kernel module operations
  *
@@ -1226,9 +1508,12 @@ static bool fclkcfg_platform_driver_done = 0;
  */
 static void fclkcfg_module_cleanup(void)
 {
-    if (fclkcfg_platform_driver_done ){platform_driver_unregister(&fclkcfg_platform_driver);}
-    if (fclkcfg_sys_class     != NULL){class_destroy(fclkcfg_sys_class);}
-    if (fclkcfg_device_number != 0   ){unregister_chrdev_region(fclkcfg_device_number, 0);}
+#if (USE_FCLK_BRIDGE == 1)
+    if (fclkbridge_platform_driver_done){platform_driver_unregister(&fclkbridge_platform_driver);}
+#endif
+    if (fclkcfg_platform_driver_done   ){platform_driver_unregister(&fclkcfg_platform_driver);}
+    if (fclkcfg_sys_class     != NULL  ){class_destroy(fclkcfg_sys_class);}
+    if (fclkcfg_device_number != 0     ){unregister_chrdev_region(fclkcfg_device_number, 0);}
     ida_destroy(&fclkcfg_device_ida);
 }
 
@@ -1271,6 +1556,16 @@ static int __init fclkcfg_module_init(void)
     } else {
         fclkcfg_platform_driver_done = 1;
     }
+
+#if (USE_FCLK_BRIDGE == 1)
+    retval = platform_driver_register(&fclkbridge_platform_driver);
+    if (retval) {
+        printk(KERN_ERR "fclkbridge: couldn't register platform driver\n");
+    } else {
+        fclkbridge_platform_driver_done = 1;
+    }
+#endif
+
     return 0;
 
  failed:
