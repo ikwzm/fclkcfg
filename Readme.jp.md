@@ -458,8 +458,9 @@ fclkcfg をインストールしてデバイスツリーを追加すると、各
   *  /sys/class/fclkcfg/\<device-name\>/round_rate
   *  /sys/class/fclkcfg/\<device-name\>/resource
   *  /sys/class/fclkcfg/\<device-name\>/resource_clks
-
-
+  *  /sys/class/fclkcfg/\<device-name\>/remove_rate
+  *  /sys/class/fclkcfg/\<device-name\>/remove_enable
+  *  /sys/class/fclkcfg/\<device-name\>/remove_resource
 
 
 ## /sys/class/fclkcfg/\<device-name\>/enable
@@ -558,6 +559,46 @@ armpll, ddrpll, iopll
 
 ```
 
+## /sys/class/fclkcfg/\<device-name\>/remove_rate
+
+
+このファイルは、クロックデバイスがリムーブされた時に設定する周波数を指定します。
+
+
+```console
+zynq# echo 100000000 > /sys/class/fclkcfg/fclk0/remove_rate
+zynq# cat /sys/class/fclkcfg/fclk0/remove_rate
+100000000
+```
+
+
+このファイルに負の値を書き込んだ場合、クロックデバイスのリムーブ時に周波数を変更しません。
+
+
+
+
+## /sys/class/fclkcfg/\<device-name\>/remove_enable
+
+
+このファイルは、クロックデバイスがリムーブされた時にクロックを出力するか停止するかを指定します。
+
+１を書き込むとクロックデバイスのリムーブ時にクロックを出力します。
+
+０を書き込むとクロックデバイスのリムーブ時にクロックを出力しません。
+
+−1を書き込むとクロックデバイスのリムーブ時にクロックを制御しません。
+
+
+
+
+## /sys/class/fclkcfg/\<device-name\>/remove_resource
+
+
+このファイルは、クロックデバイスがリムーブされた時のリソースクロックを指定します。このファイルは clocks プロパティに第二引数以降がある場合にのみ効果があります。clocks プロパティが第一引数のみがある場合、リソースクロックは変更されません。
+
+0以上の値を書き込むと、クロックデバイスのリムーブ時にリソースクロックを指定されたリソースクロックに変更します。
+
+負の値を書き込むと、クロックデバイスのリムーブ時にリソースクロックを変更しません。
 
 
 # 参考
