@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.6.1-rc.1"
+#define DRIVER_VERSION     "1.7.0-rc.1"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -66,19 +66,19 @@ MODULE_LICENSE("Dual BSD/GPL");
 /**
  * DOC: fclkcfg static variables
  *
- * * info_enable        - fclkcfg install/uninstall infomation enable.
- * * debug_print        - fclkcfg debug print enable.
+ * * info_enable    - fclkcfg install/uninstall infomation enable.
+ * * debug_print    - fclkcfg debug print enable.
  */
 
 /**
- * info_enable        - fclkcfg install/uninstall infomation enable.
+ * info_enable      - fclkcfg install/uninstall infomation enable.
  */
 static int            info_enable = 1;
 module_param(         info_enable , int, S_IRUGO);
 MODULE_PARM_DESC(     info_enable , DRIVER_NAME " install/uninstall infomation enable");
 
 /**
- * debug_print        - fclkcfg debug print enable.
+ * debug_print      - fclkcfg debug print enable.
  */
 static int            debug_print = 0;
 module_param(         debug_print , int, S_IRUGO);
@@ -337,10 +337,7 @@ static int __fclk_change_state(struct fclk_device_data* this, struct fclk_state*
 }
 
 /**
- * DOC: fclk system class device file description
- *
- * This section define the device file created in system class when fclk is 
- * loaded into the kernel.
+ * DOC: fclk system class device file show/set operations.
  *
  * The device file created in system class is as follows.
  *
@@ -350,33 +347,41 @@ static int __fclk_change_state(struct fclk_device_data* this, struct fclk_state*
  * * /sys/class/<class-name>/<device-name>/round_rate
  * * /sys/class/<class-name>/<device-name>/resource_clks
  * * /sys/class/<class-name>/<device-name>/resource
+ * * /sys/class/<class-name>/<device-name>/remove_enable
+ * * /sys/class/<class-name>/<device-name>/remove_rate
+ * * /sys/class/<class-name>/<device-name>/remove_resource
  */
 /**
  * fclk_show_driver_version()
  */
-static ssize_t fclk_show_driver_version(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t fclk_show_driver_version(struct fclk_device_data* this, struct device_attribute *attr, char *buf)
 {
+    if (!this)
+        return -ENODEV;
     return sprintf(buf, "%s\n", DRIVER_VERSION);
 }
 
 /**
  * fclk_show_enable()
  */
-static ssize_t fclk_show_enable(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t fclk_show_enable(struct fclk_device_data* this, struct device_attribute *attr, char *buf)
 {
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    if (!this)
+        return -ENODEV;
     return sprintf(buf, "%d\n", __clk_is_enabled(this->clk));
 }
 
 /**
  * fclk_set_enable()
  */
-static ssize_t fclk_set_enable(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+static ssize_t fclk_set_enable(struct fclk_device_data* this, struct device_attribute *attr, const char *buf, size_t size)
 {
-    ssize_t                  get_result;
-    int                      set_result;
-    unsigned long            enable;
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    ssize_t       get_result;
+    int           set_result;
+    unsigned long enable;
+
+    if (!this)
+        return -ENODEV;
 
     if (0 != (get_result = kstrtoul(buf, 0, &enable)))
         return get_result;
@@ -390,21 +395,24 @@ static ssize_t fclk_set_enable(struct device *dev, struct device_attribute *attr
 /**
  * fclk_show_rate()
  */
-static ssize_t fclk_show_rate(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t fclk_show_rate(struct fclk_device_data* this, struct device_attribute *attr, char *buf)
 {
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    if (!this)
+        return -ENODEV;
     return sprintf(buf, "%lu\n", clk_get_rate(this->clk));
 }
 
 /**
  * fclk_set_rate()
  */
-static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+static ssize_t fclk_set_rate(struct fclk_device_data* this, struct device_attribute *attr, const char *buf, size_t size)
 {
-    ssize_t                  get_result;
-    int                      set_result;
-    struct fclk_state        next_state;
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    ssize_t           get_result;
+    int               set_result;
+    struct fclk_state next_state;
+
+    if (!this)
+        return -ENODEV;
 
     if (0 != (get_result = kstrtoul(buf, 0, &next_state.rate)))
         return get_result;
@@ -424,9 +432,11 @@ static ssize_t fclk_set_rate(struct device *dev, struct device_attribute *attr, 
 /**
  * fclk_show_round_rate()
  */
-static ssize_t fclk_show_round_rate(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t fclk_show_round_rate(struct fclk_device_data* this, struct device_attribute *attr, char *buf)
 {
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    if (!this)
+        return -ENODEV;
+
     return sprintf(buf, "%lu => %lu\n",
                    this->round_rate,
                    clk_round_rate(this->clk, this->round_rate)
@@ -436,14 +446,17 @@ static ssize_t fclk_show_round_rate(struct device *dev, struct device_attribute 
 /**
  * fclk_set_round_rate()
  */
-static ssize_t fclk_set_round_rate(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+static ssize_t fclk_set_round_rate(struct fclk_device_data* this, struct device_attribute *attr, const char *buf, size_t size)
 {
-    ssize_t                  get_result;
-    unsigned long            round_rate;
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    ssize_t       get_result;
+    unsigned long round_rate;
+
+    if (!this)
+        return -ENODEV;
 
     if (0 != (get_result = kstrtoul(buf, 0, &round_rate)))
         return get_result;
+
     this->round_rate = round_rate;
     return size;
 }
@@ -451,13 +464,15 @@ static ssize_t fclk_set_round_rate(struct device *dev, struct device_attribute *
 /**
  * fclk_set_resource()
  */
-static ssize_t fclk_set_resource(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+static ssize_t fclk_set_resource(struct fclk_device_data* this, struct device_attribute *attr, const char *buf, size_t size)
 {
-    ssize_t                  get_result;
-    int                      set_result;
-    unsigned long            resclk;
-    struct fclk_state        next_state;
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    ssize_t           get_result;
+    int               set_result;
+    unsigned long     resclk;
+    struct fclk_state next_state;
+
+    if (!this)
+        return -ENODEV;
 
     if (this->resource_clks == NULL)
         return size;
@@ -484,19 +499,23 @@ static ssize_t fclk_set_resource(struct device *dev, struct device_attribute *at
 /**
  * fclk_show_resource()
  */
-static ssize_t fclk_show_resource(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t fclk_show_resource(struct fclk_device_data* this, struct device_attribute *attr, char *buf)
 {
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    if (!this)
+        return -ENODEV;
+
     return sprintf(buf, "%d\n", this->resource_clk_id);
 }
 
 /**
  * fclk_show_resource_clks()
  */
-static ssize_t fclk_show_resource_clks(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t fclk_show_resource_clks(struct fclk_device_data* this, struct device_attribute *attr, char *buf)
 {
-    size_t                   size = 0;
-    struct fclk_device_data* this = dev_get_drvdata(dev);
+    size_t size = 0;
+
+    if (!this)
+        return -ENODEV;
 
     if ((this->resource_clks != NULL) && (this->resource_clks_size > 0)) {
         int    i;
@@ -514,6 +533,135 @@ static ssize_t fclk_show_resource_clks(struct device *dev, struct device_attribu
     }
     return size;
 }
+
+/**
+ * DEF_FCLK_STATE_SHOW_ENABLE() - generate fclk_show_ ## state ## _enable() macro
+ */
+#define DEF_FCLK_STATE_SHOW_ENABLE(state)       \
+static ssize_t fclk_show_ ## state ## _enable(  \
+    struct fclk_device_data* this,              \
+    struct device_attribute* attr,              \
+    char*                    buf)               \
+{                                               \
+    if (!this) return -ENODEV;                  \
+    if (this->state.enable_valid == false) {return sprintf(buf, "%d\n", -1);} \
+    if (this->state.enable       == true ) {return sprintf(buf, "%d\n",  1);} \
+    else                                   {return sprintf(buf, "%d\n",  0);} \
+}
+
+/**
+ * DEF_FCLK_STATE_SET_ENABLE()  - generate fclk_set_ ## state ## _enable() macro
+ */
+#define DEF_FCLK_STATE_SET_ENABLE(state)        \
+static ssize_t fclk_set_ ## state ## _enable(   \
+    struct fclk_device_data* this,              \
+    struct device_attribute* attr,              \
+    const char*              buf,               \
+    size_t                   size)              \
+{                                               \
+    ssize_t                  get_result;        \
+    long                     enable;            \
+    if (!this) return -ENODEV;                  \
+    if (0 != (get_result = kstrtol(buf, 0, &enable))) \
+        return get_result; \
+    if      (enable  > 0) {this->state.enable_valid = true ;this->state.enable = true ;} \
+    else if (enable == 0) {this->state.enable_valid = true ;this->state.enable = false;} \
+    else                  {this->state.enable_valid = false;} \
+    return size; \
+}
+
+/**
+ * DEF_FCLK_STATE_SHOW_RATE()   - generate fclk_show_ ## state ## _rate() macro
+ */
+#define DEF_FCLK_STATE_SHOW_RATE(state)         \
+static ssize_t fclk_show_ ## state ## _rate(    \
+    struct fclk_device_data* this,              \
+    struct device_attribute* attr,              \
+    char*                    buf)               \
+{                                               \
+    if (!this) return -ENODEV;                  \
+    if (this->state.rate_valid == false) {return sprintf(buf, "%d\n" , -1);} \
+    else                                 {return sprintf(buf, "%lu\n", this->state.rate);} \
+}
+
+/**
+ * DEF_FCLK_STATE_SET_RATE()    - generate fclk_set_## state ## _rate() macro
+ */
+#define DEF_FCLK_STATE_SET_RATE(state)          \
+static ssize_t fclk_set_ ## state ## _rate(     \
+    struct fclk_device_data* this,              \
+    struct device_attribute* attr,              \
+    const char*              buf,               \
+    size_t                   size)              \
+{                                               \
+    ssize_t                  get_result;        \
+    long                     rate;              \
+    if (!this) return -ENODEV;                  \
+    if (0 != (get_result = kstrtol(buf, 0, &rate))) \
+        return get_result; \
+    if   (rate >= 0) {this->state.rate_valid = true ;this->state.rate = (unsigned long)rate;} \
+    else             {this->state.rate_valid = false;} \
+    return size; \
+}
+
+/**
+ * DEF_FCLK_STATE_SHOW_RESOURCE() - generate fclk_show_ ## state ## _resource() macro
+ */
+#define DEF_FCLK_STATE_SHOW_RESOURCE(state)      \
+static ssize_t fclk_show_ ## state ## _resource( \
+    struct fclk_device_data* this,               \
+    struct device_attribute* attr,               \
+    char*                    buf)                \
+{                                                \
+    if (!this) return -ENODEV;                   \
+    if (this->state.resclk_valid == false) {return sprintf(buf, "%d\n" , -1);} \
+    else                                   {return sprintf(buf, "%lu\n", this->state.resclk);} \
+}
+
+/**
+ * DEF_FCLK_STATE_SET_RESOURCE() - generate fclk_set_ ## state ## _resource() macro
+ */
+#define DEF_FCLK_STATE_SET_RESOURCE(state)       \
+static ssize_t fclk_set_ ## state ## _resource(  \
+    struct fclk_device_data* this,               \
+    struct device_attribute* attr,               \
+    const char*              buf,                \
+    size_t                   size)               \
+{                                                \
+    ssize_t                  get_result;         \
+    long                     resource;           \
+    if (!this) return -ENODEV;                   \
+    if ((this->resource_clks != NULL) && (this->resource_clks_size > 0)) { \
+        if (0 != (get_result = kstrtol(buf, 0, &resource))) \
+            return get_result; \
+        if ((resource >= 0) && (resource < this->resource_clks_size)) { \
+            this->state.resclk_valid = true; \
+            this->state.resclk       = (unsigned long)resource; \
+            return size; \
+        } \
+        if (resource < 0) { \
+            this->state.resclk_valid = false; \
+            return size; \
+        } \
+        return -EINVAL; \
+    } \
+    return size;\
+}
+
+/**
+ * fclk_show_remove_enable()
+ * fclk_show_remove_rate()
+ * fclk_show_remove_resource()
+ * fclk_set_remove_enable()
+ * fclk_set_remove_rate()
+ * fclk_set_remove_resource()
+ */
+DEF_FCLK_STATE_SHOW_ENABLE  (remove);
+DEF_FCLK_STATE_SHOW_RATE    (remove);
+DEF_FCLK_STATE_SHOW_RESOURCE(remove);
+DEF_FCLK_STATE_SET_ENABLE   (remove);
+DEF_FCLK_STATE_SET_RATE     (remove);
+DEF_FCLK_STATE_SET_RESOURCE (remove);
 
 /**
  * DOC: fclk device data operations
@@ -740,24 +888,102 @@ static struct class*  fclkcfg_sys_class     = NULL;
 static dev_t          fclkcfg_device_number = 0;
 static DEFINE_IDA(    fclkcfg_device_ida );
 
+/**
+ * DEF_FCLKCFG_SHOW() - generate fclkcfg_show_ ## __attr_name() macro
+ */
+#define DEF_FCLKCFG_SHOW(__attr_name)        \
+static ssize_t fclkcfg_show_ ## __attr_name( \
+    struct device* dev,                      \
+    struct device_attribute *attr,           \
+    char *buf)                               \
+{   return fclk_show_ ## __attr_name(dev_get_drvdata(dev), attr, buf);}
+
+/**
+ * DEF_FCLKCFG_SET()  - generate fclkcfg_set_ ## __attr_name() macro
+ */
+#define DEF_FCLKCFG_SET(__attr_name)        \
+static ssize_t fclkcfg_set_ ## __attr_name( \
+    struct device* dev,                     \
+    struct device_attribute *attr,          \
+    const char *buf,                        \
+    size_t size)                            \
+{   return fclk_set_ ## __attr_name(dev_get_drvdata(dev), attr, buf, size);}
+
+/**
+ * fclkcfg_show_driver_version()
+ */
+DEF_FCLKCFG_SHOW(driver_version);
+/**
+ * fclkcfg_show_enable()
+ * fclkcfg_set_enable()
+ */
+DEF_FCLKCFG_SHOW(enable);
+DEF_FCLKCFG_SET (enable);
+/**
+ * fclkcfg_show_rate()
+ * fclkcfg_set_rate()
+ */
+DEF_FCLKCFG_SHOW(rate);
+DEF_FCLKCFG_SET (rate);
+/**
+ * fclkcfg_show_round_rate()
+ * fclkcfg_set_round_rate()
+ */
+DEF_FCLKCFG_SHOW(round_rate);
+DEF_FCLKCFG_SET (round_rate);
+/**
+ * fclkcfg_show_resource()
+ * fclkcfg_set_resource()
+ */
+DEF_FCLKCFG_SHOW(resource);
+DEF_FCLKCFG_SET (resource);
+/**
+ * fclkcfg_show_resource_clks()
+ */
+DEF_FCLKCFG_SHOW(resource_clks);
+/**
+ * fclkcfg_show_remove_enable()
+ * fclkcfg_set_remove_enable()
+ */
+DEF_FCLKCFG_SHOW(remove_enable);
+DEF_FCLKCFG_SET (remove_enable);
+/**
+ * fclkcfg_show_remove_rate()
+ * fclkcfg_set_remove_rate()
+ */
+DEF_FCLKCFG_SHOW(remove_rate);
+DEF_FCLKCFG_SET (remove_rate);
+/**
+ * fclkcfg_show_remove_resource()
+ * fclkcfg_set_remove_resource()
+ */
+DEF_FCLKCFG_SHOW(remove_resource);
+DEF_FCLKCFG_SET (remove_resource);
+
 static struct device_attribute fclkcfg_device_attrs[] = {
-  __ATTR(driver_version , 0444, fclk_show_driver_version, NULL               ),
-  __ATTR(enable         , 0664, fclk_show_enable        , fclk_set_enable    ),
-  __ATTR(rate           , 0664, fclk_show_rate          , fclk_set_rate      ),
-  __ATTR(round_rate     , 0664, fclk_show_round_rate    , fclk_set_round_rate),
-  __ATTR(resource       , 0664, fclk_show_resource      , fclk_set_resource  ),
-  __ATTR(resource_clks  , 0444, fclk_show_resource_clks , NULL               ),
+  __ATTR(driver_version , 0444, fclkcfg_show_driver_version , NULL                       ),
+  __ATTR(enable         , 0664, fclkcfg_show_enable         , fclkcfg_set_enable         ),
+  __ATTR(rate           , 0664, fclkcfg_show_rate           , fclkcfg_set_rate           ),
+  __ATTR(round_rate     , 0664, fclkcfg_show_round_rate     , fclkcfg_set_round_rate     ),
+  __ATTR(resource       , 0664, fclkcfg_show_resource       , fclkcfg_set_resource       ),
+  __ATTR(resource_clks  , 0444, fclkcfg_show_resource_clks  , NULL                       ),
+  __ATTR(remove_enable  , 0664, fclkcfg_show_remove_enable  , fclkcfg_set_remove_enable  ),
+  __ATTR(remove_rate    , 0664, fclkcfg_show_remove_rate    , fclkcfg_set_remove_rate    ),
+  __ATTR(remove_resource, 0664, fclkcfg_show_remove_resource, fclkcfg_set_remove_resource),
   __ATTR_NULL,
 };
 
 #if (USE_DEV_GROUPS == 1)
 static struct attribute *fclkcfg_attrs[] = {
-  &(fclkcfg_device_attrs[0].attr),
-  &(fclkcfg_device_attrs[1].attr),
-  &(fclkcfg_device_attrs[2].attr),
-  &(fclkcfg_device_attrs[3].attr),
-  &(fclkcfg_device_attrs[4].attr),
-  &(fclkcfg_device_attrs[5].attr),
+  &(fclkcfg_device_attrs[ 0].attr),
+  &(fclkcfg_device_attrs[ 1].attr),
+  &(fclkcfg_device_attrs[ 2].attr),
+  &(fclkcfg_device_attrs[ 3].attr),
+  &(fclkcfg_device_attrs[ 4].attr),
+  &(fclkcfg_device_attrs[ 5].attr),
+  &(fclkcfg_device_attrs[ 6].attr),
+  &(fclkcfg_device_attrs[ 7].attr),
+  &(fclkcfg_device_attrs[ 8].attr),
   NULL
 };
 static struct attribute_group  fclkcfg_attr_group = {
