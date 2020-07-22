@@ -467,6 +467,43 @@ The file only has an effect if the `clocks` property has second and subsequent a
 Writing a value of 0 or greater changes to the resource clock specified when the clock device was removed.
 Writing a negative value does not change the resource clock when the clock device is removed.
 
+# Changing the clock frequency safely
+
+## Example of unsafely frequency change (PLL case)
+
+A PLL (Phase-Locked Loop) frequency synthesizer creates an output clock signal with an accurate frequency by digitally setting the frequency multiplication factor to be added or subtracted from the input clock signal.
+The PLL generates a clock with the desired frequency by feeding back the output clock signal and adjusting the phase difference with the input clock signal. Generally, it takes some time to adjust the phase, and the output clock frequency becomes unstable during the adjustment. If this clock is output as it is, the circuit running on that clock may malfunction.
+
+![Fig.2 ADPLL(All Digital Phase-Locked Loop)](./fclkcfg2.jpg "Fig.2 ADPLL(All Digital Phase-Locked Loop)")
+
+Fig.2 ADPLL(All Digital Phase-Locked Loop)
+
+
+## Example of unsafely frequency change (ZynqMP case)
+
+The FPGA clock generation circuit of ZynqMP has the following structure. The feature is that two independent Dividers are connected.
+
+![Fig.3 ZynqMP Clock Generator Block Diagram](./fclkcfg3.jpg "Fig.3 ZynqMP Clock Generator Block Diagram")
+
+Fig.3 ZynqMP Clock Generator Block Diagram
+
+However, if there is a time lag in the time to set each Divider, it is possible to output a clock with an unintended frequency.
+
+For example, suppose that the Primary PLL is set to 1000MHz, pl0_division0 is set to 10, and Pl0_division1 is set to 1. In this case, the frequency of the output clock is 100MHz (=(1000MHz÷10)÷1). Now suppose you change the frequency to 250MHz. If you set pl0_division0 to 1 and then set pl0_division1 to 4 as shown in the following figure, 1000MHz clock is output from the setting of pl0_divison0 to the setting of pl1_division1. And there is a possibility that the circuit that operates with that clock may malfunction.
+
+![Fig.4 Example of ZynqMP output an unintended frequency clock](./fclkcfg4.jpg "Fig.4 Example of ZynqMP output an unintended frequency clock")
+
+Fig.4 Example of ZynqMP output an unintended frequency clock
+
+
+## Changing the clock frequency safely with fclkcfg
+
+When changing the frequency, `fclkcfg` stops the clock output before changing the frequency. Then, after changing the frequency, the clock is output. By preventing the output of a clock with an unintended frequency in this way, it is possible to prevent malfunction of the circuit that operates with that clock.
+
+![Fig.5 Changing the clock frequency safely with fclkcfg](./fclkcfg5.jpg "Fig.5 Changing the clock frequency safely with fclkcfg")
+
+Fig.5 Changing the clock frequency safely with fclkcfg
+
 # Reference
 
 * [FPGA Clock Configuration Device Driver(https://github.com/ikwzm/fclkcfg)](https://github.com/ikwzm/fclkcfg)
