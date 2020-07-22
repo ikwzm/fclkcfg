@@ -108,7 +108,7 @@ fclkcfg はデバイスツリーでクロックの設定をします。具体的
 ## compatible プロパティ
 
 
-compatible プロパティはカーネルモジュールの中から対応するデバイスドライバを探すためのキーワードを示します。fclkcfg では "ikwzm,fclkcfg-0.10.a" または "ikwzm,fclkcfg" を指定します。compatible プロパティは必須です。
+compatible プロパティはカーネルモジュールの中から対応するデバイスドライバを探すためのキーワードを示します。fclkcfg では "ikwzm,fclkcfg-0.10.a" または "ikwzm,fclkcfg" を指定します。compatible プロパティは必須です。(v1.6.0より前は "ikwzm、fclkcfg-0.10.a" のみ使えました。 v1.6.0以降では "ikwzm、fclkcfg" も使えます。)
 
 
 
