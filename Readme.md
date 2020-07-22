@@ -86,7 +86,7 @@ The subsections below describe details of the properties configurable in the dev
 
 The `compatible` property specifies a keyword which is used to find an appropriate device driver
 among available kernel module. For `fclkcfg`, this field is mandatory and shall contain
-`"ikwzm,fclkcfg"` or `"ikwzm,fclkcfg"`.
+`"ikwzm,fclkcfg-0.10.a"` or `"ikwzm,fclkcfg"`. (Prior to v1.6.0, only `"ikwzm,fclkcfg-0.10.a"` could be used. After v1.6.0, `"ikwzm,fclkcfg"` also can be used).
 
 ## `device-name` property
 
