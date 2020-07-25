@@ -489,7 +489,7 @@ Fig.3 ZynqMP Clock Generator Block Diagram
 
 However, if there is a time lag in the time to set each Divider, it is possible to output a clock with an unintended frequency.
 
-For example, suppose that the Primary PLL is set to 1000MHz, pl0_division0 is set to 10, and Pl0_division1 is set to 1. In this case, the frequency of the output clock is 100MHz (=(1000MHz÷10)÷1). Now suppose you change the frequency to 250MHz. If you set pl0_division0 to 1 and then set pl0_division1 to 4 as shown in the following figure, 1000MHz clock is output from the setting of pl0_divison0 to the setting of pl1_division1. And there is a possibility that the circuit that operates with that clock may malfunction.
+For example, suppose that the Primary PLL is set to 1500MHz, pl0_division0 is set to 15, and Pl0_division1 is set to 1. In this case, the frequency of the output clock is 100MHz (=(1500MHz÷15)÷1). Now suppose you change the frequency to 250MHz. If you set pl0_division0 to 1 and then set pl0_division1 to 6 as shown in the following figure, 1500MHz clock is output from the setting of pl0_divison0 to the setting of pl1_division1. And there is a possibility that the circuit that operates with that clock may malfunction.
 
 ![Fig.4 Example of ZynqMP output an unintended frequency clock](./fclkcfg4.jpg "Fig.4 Example of ZynqMP output an unintended frequency clock")
 
