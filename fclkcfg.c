@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.7.1"
+#define DRIVER_VERSION     "1.7.2-rc.1"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -115,19 +115,26 @@ struct fclk_state {
  * of_get_fclk_state()  - get rate/enable/resource property from device tree.
  *
  * @dev:         handle to the device structure.
+ * @of_node:     handle to the device tree node.
  * @rate_name:   rate property name
  * @enable_name: enable property name
  * @resclk_name: resource clock property name
  * @state:       address of fclk state data.
  * Return:       Success(=0) or error status(<0).
  */
-static void of_get_fclk_state(struct device* dev, const char* rate_name, const char* enable_name, const char* resclk_name, struct fclk_state* state)
+static void of_get_fclk_state(
+    struct device*      dev,
+    struct device_node* of_node,
+    const  char*        rate_name,
+    const  char*        enable_name,
+    const  char*        resclk_name,
+    struct fclk_state*  state)
 {
     DEV_DBG(dev, "get %s start.\n", rate_name);
     {
         const char* prop;
 
-        prop = of_get_property(dev->of_node, rate_name, NULL);
+        prop = of_get_property(of_node, rate_name, NULL);
         
         if (!IS_ERR_OR_NULL(prop)) {
             ssize_t       prop_status;
@@ -137,6 +144,7 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
             } else {
                 state->rate_valid = true;
                 state->rate       = rate;
+                DEV_DBG(dev, "get %s property (=%lu).\n", rate_name, rate);
             }
         }
     }
@@ -147,11 +155,12 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
         int          retval;
         unsigned int enable;
 
-        retval = of_property_read_u32(dev->of_node, enable_name, &enable);
+        retval = of_property_read_u32(of_node, enable_name, &enable);
 
         if (retval == 0) {
             state->enable_valid = true;
             state->enable       = (enable != 0);
+            DEV_DBG(dev, "get %s property (=%d).\n", enable_name, enable);
         }
     }
     DEV_DBG(dev, "get %s done.\n", enable_name);
@@ -161,11 +170,12 @@ static void of_get_fclk_state(struct device* dev, const char* rate_name, const c
         int          retval;
         unsigned int resclk;
 
-        retval = of_property_read_u32(dev->of_node, resclk_name, &resclk);
+        retval = of_property_read_u32(of_node, resclk_name, &resclk);
 
         if (retval == 0) {
             state->resclk_valid = true;
             state->resclk       = resclk;
+            DEV_DBG(dev, "get %s property (=%d).\n", resclk_name, resclk);
         }
     }
     DEV_DBG(dev, "get %s done.\n", resclk_name);
@@ -186,10 +196,10 @@ struct fclk_device_data {
     struct clk**         resource_clks;
     int                  resource_clks_size;
     int                  resource_clk_id;
-    dev_t                device_number;
     unsigned long        round_rate;
     struct fclk_state    insert;
     struct fclk_state    remove;
+    dev_t                device_number;
 };
 
 /**
@@ -718,6 +728,7 @@ static void fclk_device_info(struct fclk_device_data* this, struct platform_devi
  *
  * @this:        Pointer to the fclk device data.
  * @dev:         handle to the device structure.
+ * @of_node:     handle to the of node.
  * @rate_name:   rate property name
  * @enable_name: enable property name
  * @resclk_name: resource clock property name
@@ -725,9 +736,16 @@ static void fclk_device_info(struct fclk_device_data* this, struct platform_devi
  * Return:       Success(=0) or error status(<0).
  *
  */
-static int fclk_device_get_state_property(struct fclk_device_data* this, struct device* dev, const char* rate_name, const char* enable_name, const char* resclk_name, struct fclk_state* state)
+static int fclk_device_get_state_property(
+    struct fclk_device_data* this       ,
+    struct device*           dev        ,
+    struct device_node*      of_node    ,
+    const  char*             rate_name  ,
+    const  char*             enable_name,
+    const  char*             resclk_name,
+    struct fclk_state*       state      )
 {
-    of_get_fclk_state(dev, rate_name, enable_name, resclk_name, state);
+    of_get_fclk_state(dev, of_node, rate_name, enable_name, resclk_name, state);
     if ((this->resource_clks != NULL) &&
         (state->resclk_valid == true) &&
         (state->resclk >= this->resource_clks_size)) {
@@ -810,7 +828,10 @@ static int fclk_device_setup(struct fclk_device_data* this, struct device *dev)
         this->insert.resclk_valid = true; 
         this->insert.resclk       = 0;
     }
-    retval = fclk_device_get_state_property(this, dev, "insert-rate", "insert-enable", "insert-resource", &this->insert);
+    retval = fclk_device_get_state_property(
+                 this, dev, dev->of_node,
+                 "insert-rate", "insert-enable", "insert-resource", &this->insert
+             );
     if (retval)
         goto failed;
 
@@ -829,7 +850,10 @@ static int fclk_device_setup(struct fclk_device_data* this, struct device *dev)
     /*
      * get remove state
      */
-    retval = fclk_device_get_state_property(this, dev, "remove-rate", "remove-enable", "remove-resource", &this->remove);
+    retval = fclk_device_get_state_property(
+                 this, dev, dev->of_node,
+                 "remove-rate", "remove-enable", "remove-resource", &this->remove
+             );
     if (retval)
         goto failed;
 
