@@ -1,0 +1,15 @@
+#
+# fclkcfg
+#
+
+menuconfig FCLKCFG
+	tristate "fpga clock configure kernel module"
+	depends on OF
+	help
+	  Enable this to allow the fclkcfg to be built.
+          fclkcfg, which stands for FPGA Clock Configuration, is a 
+	  device driver that enables user-space configuration of clock 
+	  supplied to Programmable Logic (PL) of Zynq/Zynq UltraScale+.
+
+	  If you don't know what to do here, say N.
+
