@@ -1280,7 +1280,11 @@ static int __init fclkcfg_module_init(void)
         goto failed;
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
     fclkcfg_sys_class = class_create(THIS_MODULE, DRIVER_NAME);
+#else
+    fclkcfg_sys_class = class_create(DRIVER_NAME);
+#endif
     if (IS_ERR_OR_NULL(fclkcfg_sys_class)) {
         printk(KERN_ERR "%s: couldn't create sys class\n", DRIVER_NAME);
         retval = PTR_ERR(fclkcfg_sys_class);
