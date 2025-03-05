@@ -1,6 +1,6 @@
 /*********************************************************************************
  *
- *       Copyright (C) 2016-2023 Ichiro Kawazome
+ *       Copyright (C) 2016-2025 Ichiro Kawazome
  *       All rights reserved.
  * 
  *       Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.7.3"
+#define DRIVER_VERSION     "1.8.0"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -1190,14 +1190,14 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
 }
 
 /**
- * fclkcfg_platform_driver_remove() -  Remove call for the device.
+ * _fclkcfg_platform_driver_remove() -  Remove call for the device.
  *
  * @pdev:	handle to the platform device structure.
  * Returns 0 or error status.
  *
  * Unregister the device after releasing the resources.
  */
-static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
+static inline int _fclkcfg_platform_driver_remove(struct platform_device *pdev)
 {
     struct fclk_device_data* this = dev_get_drvdata(&pdev->dev);
 
@@ -1212,6 +1212,33 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
     dev_info(&pdev->dev, "driver removed.\n");
     return 0;
 }
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
+/**
+ * fclkcfg_platform_driver_remove() -  Remove call for the device.
+ *
+ * @pdev:	handle to the platform device structure.
+ * Returns 0 or error status.
+ *
+ * Unregister the device after releasing the resources.
+ */
+static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
+{
+    return _fclkcfg_platform_driver_remove(pdev);
+}
+#else
+/**
+ * fclkcfg_platform_driver_remove() -  Remove call for the device.
+ *
+ * @pdev:	handle to the platform device structure.
+ * Returns      void
+ *
+ * Unregister the device after releasing the resources.
+ */
+static void fclkcfg_platform_driver_remove(struct platform_device *pdev)
+{
+    _fclkcfg_platform_driver_remove(pdev);
+}
+#endif
 
 /**
  * Open Firmware Device Identifier Matching Table
@@ -1280,7 +1307,11 @@ static int __init fclkcfg_module_init(void)
         goto failed;
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
     fclkcfg_sys_class = class_create(THIS_MODULE, DRIVER_NAME);
+#else
+    fclkcfg_sys_class = class_create(DRIVER_NAME);
+#endif
     if (IS_ERR_OR_NULL(fclkcfg_sys_class)) {
         printk(KERN_ERR "%s: couldn't create sys class\n", DRIVER_NAME);
         retval = PTR_ERR(fclkcfg_sys_class);
