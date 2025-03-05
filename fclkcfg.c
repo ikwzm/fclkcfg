@@ -1190,14 +1190,14 @@ static int fclkcfg_platform_driver_probe(struct platform_device *pdev)
 }
 
 /**
- * fclkcfg_platform_driver_remove() -  Remove call for the device.
+ * _fclkcfg_platform_driver_remove() -  Remove call for the device.
  *
  * @pdev:	handle to the platform device structure.
  * Returns 0 or error status.
  *
  * Unregister the device after releasing the resources.
  */
-static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
+static inline int _fclkcfg_platform_driver_remove(struct platform_device *pdev)
 {
     struct fclk_device_data* this = dev_get_drvdata(&pdev->dev);
 
@@ -1212,6 +1212,33 @@ static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
     dev_info(&pdev->dev, "driver removed.\n");
     return 0;
 }
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
+/**
+ * fclkcfg_platform_driver_remove() -  Remove call for the device.
+ *
+ * @pdev:	handle to the platform device structure.
+ * Returns 0 or error status.
+ *
+ * Unregister the device after releasing the resources.
+ */
+static int fclkcfg_platform_driver_remove(struct platform_device *pdev)
+{
+    return _fclkcfg_platform_driver_remove(pdev);
+}
+#else
+/**
+ * fclkcfg_platform_driver_remove() -  Remove call for the device.
+ *
+ * @pdev:	handle to the platform device structure.
+ * Returns      void
+ *
+ * Unregister the device after releasing the resources.
+ */
+static void fclkcfg_platform_driver_remove(struct platform_device *pdev)
+{
+    _fclkcfg_platform_driver_remove(pdev);
+}
+#endif
 
 /**
  * Open Firmware Device Identifier Matching Table
