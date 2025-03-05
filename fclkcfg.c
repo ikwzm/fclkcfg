@@ -1,6 +1,6 @@
 /*********************************************************************************
  *
- *       Copyright (C) 2016-2023 Ichiro Kawazome
+ *       Copyright (C) 2016-2025 Ichiro Kawazome
  *       All rights reserved.
  * 
  *       Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.7.3"
+#define DRIVER_VERSION     "1.8.0"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
