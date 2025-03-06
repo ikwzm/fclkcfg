@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.8.0"
+#define DRIVER_VERSION     "1.9.0"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -67,6 +67,8 @@ MODULE_LICENSE("Dual BSD/GPL");
  * DOC: fclkcfg static variables
  *
  * * info_enable    - fclkcfg install/uninstall infomation enable.
+ * * enable_sync    - fclkcfg enable synchronization.
+ * * disable_retry  - fclkcfg disable retry count.
  * * debug_print    - fclkcfg debug print enable.
  */
 
@@ -76,6 +78,20 @@ MODULE_LICENSE("Dual BSD/GPL");
 static int            info_enable = 1;
 module_param(         info_enable , int, S_IRUGO);
 MODULE_PARM_DESC(     info_enable , DRIVER_NAME " install/uninstall infomation enable");
+
+/**
+ * enable_sync      - fclkcfg enable synchronization.
+ */
+static int            enable_sync = 0;
+module_param(         enable_sync , int, S_IRUGO);
+MODULE_PARM_DESC(     enable_sync , DRIVER_NAME " enable synchronization");
+
+/**
+ * disable_retry    - fclkcfg disable retry count.
+ */
+static int            disable_retry = 8;
+module_param(         disable_retry , int, S_IRUGO);
+MODULE_PARM_DESC(     disable_retry , DRIVER_NAME " disable retry count");
 
 /**
  * debug_print      - fclkcfg debug print enable.
@@ -200,6 +216,7 @@ struct fclk_device_data {
     struct fclk_state    insert;
     struct fclk_state    remove;
     dev_t                device_number;
+    unsigned int         disable_retry;
 };
 
 /**
@@ -235,8 +252,19 @@ static int __fclk_set_enable(struct fclk_device_data* this, bool enable)
         }
     } else {
         if (__clk_is_enabled(this->clk) == true) {
-            clk_disable_unprepare(this->clk);
-            DEV_DBG(this->device, "disable done.");
+            int  i;
+            status = -EBUSY;
+            for (i = 0; i <= this->disable_retry; i++) {
+                clk_disable_unprepare(this->clk);
+                if (__clk_is_enabled(this->clk) == false) {
+                    status = 0;
+                    break;
+                }
+            }
+            if (status) 
+                dev_err(this->device, "disable failed.");
+            else 
+                DEV_DBG(this->device, "disable success.");
         }
     }
     return status;
@@ -835,6 +863,51 @@ static int fclk_device_setup(struct fclk_device_data* this, struct device *dev)
     if (retval)
         goto failed;
 
+    /*
+     * get disable_retry
+     */
+    {
+        const char*  prop_name = "disable-retry";
+        unsigned int prop_value;
+
+        DEV_DBG(dev, "get %s start.\n", prop_name);
+
+        retval = of_property_read_u32(dev->of_node, prop_name, &prop_value);
+
+        if (retval == 0) {
+            this->disable_retry = prop_value;
+            DEV_DBG(dev, "get %s property (=%d).\n", prop_name, prop_value);
+        } else {
+            this->disable_retry = disable_retry;
+            DEV_DBG(dev, "set %s = %d\n", prop_name, disable_retry);
+        }
+        DEV_DBG(dev, "get %s done.\n", prop_name);
+    }
+    /*
+     * enable synchronization
+     */
+    {
+        const char*  prog_name = "enable synchronization";
+        const char*  prop_name = "enable-sync";
+        bool         clk_enable_sync;
+
+        if (enable_sync != 0)
+            clk_enable_sync = true;
+        else
+            clk_enable_sync = of_property_read_bool(dev->of_node, prop_name);
+
+        if (clk_enable_sync == true) {
+            if (__clk_is_enabled(this->clk)) {
+                DEV_DBG(dev, "%s start.\n", prog_name);
+                retval = clk_prepare_enable(this->clk);
+                if (retval) 
+                    dev_err(dev, "%s failed(%d).\n", prog_name, retval);
+                else
+                    DEV_DBG(dev, "%s success.\n", prog_name);
+                DEV_DBG(dev, "%s done.\n", prog_name);
+            }
+        }
+    }
     /*
      * change state to insert
      */
