@@ -156,18 +156,10 @@ Sometimes symbol definitions can be removed from a compiled device tree blob, an
 
 
 ```devicetree:fclk0-zynq-zybo.dts
-/dts-v1/;
-/ {
-    fragment@0 {
-        target-path = "/amba";
-        __overlay__ {
-            fclk0 {
-                compatible  = "ikwzm,fclkcfg";
-                clocks      = <5 15>;
-            };
+        fclk0 {
+            compatible  = "ikwzm,fclkcfg";
+            clocks      = <5 15>;
         };
-    };
-};
 ```
 
 ### Clock properties for Zynq
@@ -223,19 +215,11 @@ A double-quoted string value (in Hz) should be passed to the property. The follo
 setting a clock frequency with 100 MHz to PL Clock 0 (on Zybo).
 
 ```devicetree:fclk0-zynq-zybo.dts
-/dts-v1/;/plugin/;
-/ {
-    fragment@0 {
-        target-path = "/amba";
-        __overlay__ {
-            fclk0 {
-                compatible  = "ikwzm,fclkcfg";
-                clocks      = <&clkc 15>;
-                insert-rate = "100000000";
-            };
+        fclk0 {
+            compatible  = "ikwzm,fclkcfg";
+            clocks      = <&clkc 15>;
+            insert-rate = "100000000";
         };
-    };
-};
 ```
 
 The `insert-rate` property is optional, and when omitted, the output clock frequency is not changed from the present value.
@@ -247,19 +231,11 @@ The `insert-enable` property controls the output status of the clock when the cl
 The following example enables clock output up on installation of the clock device.
 
 ```devicetree:fclk0-zynq-zybo.dts
-/dts-v1/;/plugin/;
-/ {
-    fragment@0 {
-        target-path = "/amba";
-        __overlay__ {
-            fclk0 {
-                compatible    = "ikwzm,fclkcfg";
-                clocks        = <&clkc 15>;
-                insert-enable = <1>;
-            };
+        fclk0 {
+            compatible    = "ikwzm,fclkcfg";
+            clocks        = <&clkc 15>;
+            insert-enable = <1>;
         };
-    };
-};
 ```
 
 The `insert-enable` property is optional, and when omitted, the clock output is disabled up on installation.
@@ -291,19 +267,11 @@ A double-quoted string value (in Hz) should be passed to the property. The follo
 setting a clock frequency with 1 MHz to PL Clock 0 (on Zybo) up on removal.
 
 ```devicetree:fclk0-zynq-zybo.dts
-/dts-v1/;/plugin/;
-/ {
-    fragment@0 {
-        target-path = "/amba";
-        __overlay__ {
-            fclk0 {
-                compatible    = "ikwzm,fclkcfg";
-                clocks        = <&clkc 15>;
-                remove-rate   = "1000000";
-            };
+        fclk0 {
+            compatible    = "ikwzm,fclkcfg";
+            clocks        = <&clkc 15>;
+            remove-rate   = "1000000";
         };
-    };
-};
 ```
 
 The `remove-rate` property is optional, and when omitted, the output clock frequency will stay unchanged
@@ -316,19 +284,11 @@ The `remove-enable` property controls the output status of the clock when the cl
 The following example stops clock output up on removal of the clock device.
 
 ```devicetree:fclk0-zynq-zybo.dts
-/dts-v1/;/plugin/;
-/ {
-    fragment@0 {
-        target-path = "/amba";
-        __overlay__ {
-            fclk0 {
-                compatible    = "ikwzm,fclkcfg";
-                clocks        = <&clkc 15>;
-                remove-enable = <0>;
-            };
+        fclk0 {
+            compatible    = "ikwzm,fclkcfg";
+            clocks        = <&clkc 15>;
+            remove-enable = <0>;
         };
-    };
-};
 ```
 
 The `remove-enable` property is optional, and when omitted, the clock output will be disabled up on
@@ -354,6 +314,23 @@ For example, in the device tree below, the resource clock is set to `<&clk 1>`.
 ```
 
 The `remove-resouce` property is optional, and when omitted, the resource clock is unchanged when the clock device is removed.
+
+## `enable-sync` property
+
+In some cases, such as ZynqMP, clock is enabled in advance by firmware.
+In such a case, an inconsistency with the clock driver may occur, resulting in warning such as [issue #3](https://github.com/ikwzm/fclkcfg/issues/3) when the clock is stopped.
+
+The ```enable-sync``` property forces the clock state to be synchronized at dirver load time to suppress the occurrence of this warning.
+
+```devicetree:fclk0-zynq-zybo.dts
+        fclk0 {
+            compatible    = "ikwzm,fclkcfg";
+            device-name   = "fpga-clk0";
+            clocks        = <&clkc 15>, <&clkc 2>;
+            enable-sync;
+            insert-enable = <0>;
+        };
+```
 
 # Device files
 
