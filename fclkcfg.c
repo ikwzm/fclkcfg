@@ -53,7 +53,7 @@ MODULE_DESCRIPTION("FPGA Clock Configuration Driver");
 MODULE_AUTHOR("ikwzm");
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define DRIVER_VERSION     "1.9.0"
+#define DRIVER_VERSION     "1.9.1-RC1"
 #define DRIVER_NAME        "fclkcfg"
 #define DEVICE_MAX_NUM      32
 
@@ -984,6 +984,10 @@ static int fclk_device_cleanup(struct fclk_device_data* this)
 static struct class*  fclkcfg_sys_class     = NULL;
 static dev_t          fclkcfg_device_number = 0;
 static DEFINE_IDA(    fclkcfg_device_ida );
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 18, 0))
+#define ida_simple_get(ida, start, end, gfp) ida_alloc_range(ida, start, (end) - 1, gfp)
+#define ida_simple_remove(ida, id)           ida_free(ida, id)
+#endif
 
 /**
  * DEF_FCLKCFG_SHOW() - generate fclkcfg_show_ ## __attr_name() macro
